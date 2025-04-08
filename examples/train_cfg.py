@@ -3,7 +3,7 @@ from HyperSloth.hypersloth_config import *
 # Main configuration using Pydantic models
 hyper_config_model = HyperConfig(
     data=DataConfig(
-        dataset_name_or_path='/shared-mnt/data/share_gpt/multilingual_translation_qa_expert.json',
+        dataset_name_or_path='/data-4090/anhvth5/shared-mnt/data/localization/sharegpt_game_631k_messsages.json',
         group_by_length=True,
         # instruction_part="<|im_start|>user\n",
         # response_part="<|im_start|>assistant\n",
@@ -11,12 +11,12 @@ hyper_config_model = HyperConfig(
         response_part="<start_of_turn>model\n",
     ),
     training=TrainingConfig(
-        gpus=[4,5,6,7],
+        gpus=[0,1,2,3,4,5,6,7],
         loss_type="response_only",  # Choices: ["all", "response_only"], the loss will only be calculated on the response part of the input
-        chat_template='google/gemma-3-27b-it'
+        # chat_template='google/gemma-3-12b-it'
     ),
     fast_model_args=FastModelArgs(
-        model_name="/mnt/data/huggingface-models/ModelSpace/GemmaX2-28-9B-v0.1-bnb-4bit",
+        model_name="unsloth/gemma-3-12b-it",
         max_seq_length=7_000,
     ),
     # pretrained_lora="/shared-mnt/loras/gemma-3-27b-it-bnb-4bit_teacher_messages_deepseek_direct/loss_response_only_lora_r16_a16_seq_7000_lr_0_0001_global_bz_16_epochs_2_seed_42_mmap/",
