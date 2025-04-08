@@ -201,9 +201,8 @@ def get_trainer(
                 )
                 logger.info(f'Maybe train on responses only')
                 # import ipdb; ipdb.set_trace()
-                from datasets import DatasetDict
-                # _maybe_train_on_responses_only(trainer, hyper_config)
                 
+                from datasets import DatasetDict
                 
                 dataset_to_save = DatasetDict()
                 dataset_to_save["train"] = trainer.train_dataset
@@ -222,52 +221,37 @@ def get_trainer(
             while not os.path.exists(dataset_cache_path) and not os.path.exists(lock):
                 time.sleep(1)
 
-            start_t = time.time()
             while os.path.exists(lock):
                 time.sleep(1)
                 logger.info(f"GPU {gpu_ith}: Waiting for lock to be released")
-                # if time.time() - start_t > SLEEP_WAIT_DATASET_TIMEOUT:
-                    # remove the lock and retry
-                    # logger.warning(f"GPU {gpu_ith}: Lock not released, now removing the lock and retrying")
-                    # os.remove(lock)
-                    # train
-                    # return get_trainer(
-                    #     tokenizer,
-                    #     hyper_config,
-                    #     hf_train_args,
-                    #     gpu_ith,
-                    #     model,
-                    #     dataset_cache_path,
-                    #     dataset_cache_exists,
-                    #     counter=counter + 1,
-                    # )
-
             logger.info(f"GPU {gpu_ith}: Loading dataset from {dataset_cache_path}")
             dataset = load_from_disk(dataset_cache_path)
             trainer = _create_trainer(dataset['train'], eval_dataset=dataset['eval'], skip_prepare=True)
     except Exception as e:
-        logger.warning(f"GPU {gpu_ith}: Exception occurred: {e}")
-        if os.path.exists(lock):
-            os.remove(lock)
-        if counter >= 3:
-            raise e
-        return get_trainer(
-            tokenizer,
-            hyper_config,
-            hf_train_args,
-            gpu_ith,
-            model,
-            dataset_cache_path,
-            dataset_cache_exists,
-            counter=counter + 1,
-        )
+        raise e
+        # logger.warning(f"GPU {gpu_ith}: Exception occurred: {e}")
+        # if os.path.exists(lock):
+        #     os.remove(lock)
+        # if counter >= 3:
+        #     raise e
+        # return get_trainer(
+        #     tokenizer,
+        #     hyper_config,
+        #     hf_train_args,
+        #     gpu_ith,
+        #     model,
+        #     dataset_cache_path,
+        #     dataset_cache_exists,
+        #     counter=counter + 1,
+        # )
     finally:
         if os.path.exists(lock):
             os.remove(lock)
+    _maybe_train_on_responses_only(trainer, hyper_config)
     return trainer
 
 
-def _maybe_train_on_responses_only(trainer, hyper_config):
+def _maybe_train_on_responses_only(trainer, hyper_config:HyperConfig):
     """Use a specialized approach if 'response_only' loss is desired."""
     if hyper_config.training.loss_type == "response_only":
         from unsloth.chat_templates import train_on_responses_only
@@ -281,7 +265,7 @@ def _maybe_train_on_responses_only(trainer, hyper_config):
             trainer,
             instruction_part=instruction_part,
             response_part=response_part,
-            num_proc=64,
+            num_proc=hyper_config.data.dataset_num_proc,
         )
     return trainer
 

@@ -2,7 +2,7 @@ from typing import List, Literal, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field
 from multiprocessing import cpu_count
 
-CPU_COUNT = min(32, cpu_count() - 2)
+CPU_COUNT = min(8, cpu_count() - 2)
 
 class DataConfig(BaseModel):
     """Configuration for dataset handling and processing."""

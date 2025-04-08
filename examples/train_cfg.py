@@ -3,7 +3,11 @@ from HyperSloth.hypersloth_config import *
 # Main configuration using Pydantic models
 hyper_config_model = HyperConfig(
     data=DataConfig(
+<<<<<<< HEAD
         dataset_name_or_path='/data-4090/anhvth5/shared-mnt/data/localization/sharegpt_game_631k_messsages.json',
+=======
+        dataset_name_or_path='/shared-mnt/data/sharegpt/GameTranslationQualityScores_Balance39k.json',
+>>>>>>> 99b43a433e1186803cffdf4382ae48277a7c49e1
         group_by_length=True,
         # instruction_part="<|im_start|>user\n",
         # response_part="<|im_start|>assistant\n",
@@ -47,6 +51,4 @@ training_config_model = TrainingArgsConfig(
     packing=False,
     include_num_input_tokens_seen=True,
     eval_strategy = "epoch",
-    # eval_strategy = "steps"
-    # eval_steps = 1
 )
