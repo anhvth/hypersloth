@@ -229,21 +229,6 @@ def get_trainer(
             trainer = _create_trainer(dataset['train'], eval_dataset=dataset['eval'], skip_prepare=True)
     except Exception as e:
         raise e
-        # logger.warning(f"GPU {gpu_ith}: Exception occurred: {e}")
-        # if os.path.exists(lock):
-        #     os.remove(lock)
-        # if counter >= 3:
-        #     raise e
-        # return get_trainer(
-        #     tokenizer,
-        #     hyper_config,
-        #     hf_train_args,
-        #     gpu_ith,
-        #     model,
-        #     dataset_cache_path,
-        #     dataset_cache_exists,
-        #     counter=counter + 1,
-        # )
     finally:
         if os.path.exists(lock):
             os.remove(lock)
