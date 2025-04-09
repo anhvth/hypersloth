@@ -3,7 +3,7 @@ from HyperSloth.hypersloth_config import *
 # Main configuration using Pydantic models
 hyper_config_model = HyperConfig(
     data=DataConfig(
-        dataset_name_or_path='/home/anhvth5/LLaMA-Factory/data/translation_v3.1.refine_4k.json',
+        dataset_name_or_path='/home/anhvth5/LLaMA-Factory/data/translation_v3_seql_4k_packing.json',
         group_by_length=True,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
