@@ -1,37 +1,44 @@
 import os
 import random
+from typing import Iterator
+
 from datasets import Dataset
 from fastcore.all import patch
 from loguru import logger
 from torch.utils.data import SequentialSampler
-from transformers import Trainer
+from transformers import Trainer, TrainerCallback
+
+
+def compute_reordered_and_shuffled_ids(
+    dataset: Dataset,
+    epoch,
+    seed=42,
+) -> list[int]:
+    lens = [len(x["input_ids"]) for x in dataset]
+    sorted_ids = sorted(range(len(lens)), key=lambda k: lens[k])
+
+    from fastcore.all import chunked
+
+    num_gpus = int(os.environ["HYPERSLOTH_NUM_GPUS"])
+
+    # group size
+    chunked_lens = list(
+        chunked(
+            range(len(lens)),
+            num_gpus,
+        )
+    )
+    random.Random(seed + epoch).shuffle(chunked_lens)
+    ids = [idx for chunk in chunked_lens for idx in chunk]
+    return ids
 
 
 def reorder_and_shuffle_data(
     dataset: Dataset,
     epoch,
     seed=42,
-):
-
-    lens = [len(x["input_ids"]) for x in dataset]
-    sorted_ids = sorted(range(len(lens)), key=lambda k: lens[k])
-    dataset = dataset.select(sorted_ids)
-
-    from fastcore.all import chunked
-
-    num_gpus = int(os.environ["HYPERSLOTH_NUM_GPUS"])
-    
-    # group size
-    chunked_lens = list(
-        chunked(
-            range(len(lens)),
-           num_gpus,
-        )
-    )
-    random.Random(seed + epoch).shuffle(
-        chunked_lens
-    )  # the 8 continous value are similar
-    ids = [idx for chunk in chunked_lens for idx in chunk]
+) -> Dataset:
+    ids = compute_reordered_and_shuffled_ids(dataset, epoch, seed)
     dataset = dataset.select(ids)
     return dataset
 
@@ -45,8 +52,8 @@ def print_sequence_lengths(dataset: Dataset):
     logger.info(f"Mean sequence length: {sum(lens) / len(lens)}")
 
 
-# callback to shuffle data on_epoch_begin
-from transformers import TrainerCallback
+
+
 
 
 def get_callback_shuffle_data(trainer) -> TrainerCallback:
@@ -57,11 +64,7 @@ def get_callback_shuffle_data(trainer) -> TrainerCallback:
             self.trainer: Trainer = trainer
 
         def on_epoch_begin(self, args, state, control, train_dataloader, **kwargs):
-            # if state.epoch == 0:
-            #     return
             local_rank = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
-            # Debug info for the main GPU
-
             logger.info("[on_epoch_begin] Shuffling data, this may take a while...")
             self.trainer.train_dataset = reorder_and_shuffle_data(
                 self.trainer.train_dataset,
@@ -69,6 +72,7 @@ def get_callback_shuffle_data(trainer) -> TrainerCallback:
                 seed=args.seed,
             )
             logger.info("[on_epoch_begin] Data shuffled")
+
             print_sequence_lengths(self.trainer.train_dataset)
 
             if local_rank == 0:
@@ -88,12 +92,29 @@ def get_callback_shuffle_data(trainer) -> TrainerCallback:
     return ShuffleData(trainer)
 
 
+from transformers import SequentialSampler
+
+
+class CustomSampler(SequentialSampler):
+    def __init__(self, data_source) -> None:
+        self.data_source = data_source
+        self.ids = compute_reordered_and_shuffled_ids(
+            data_source,
+            epoch=random.randint(0, 10000),
+            seed=42,
+        )
+
+    def __iter__(self) -> Iterator[int]:
+        return iter(self.ids)
+
+
 def patch_sampler(trainer: Trainer):
 
     @patch
-    def _get_train_sampler(self: Trainer) -> SequentialSampler:
-        """Get a sequential sampler for the training dataset."""
-        return SequentialSampler(self.train_dataset)
+    def _get_train_sampler(self: Trainer) -> CustomSampler:
+        """Get a custom sampler for the training dataset."""
+        logger.info(f"Total samples in dataset: {len(self.train_dataset)}")
+        return CustomSampler(self.train_dataset)
 
     trainer.train_dataset = reorder_and_shuffle_data(
         trainer.train_dataset,
