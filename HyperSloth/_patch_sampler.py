@@ -92,7 +92,7 @@ def get_callback_shuffle_data(trainer) -> TrainerCallback:
     return ShuffleData(trainer)
 
 
-from transformers import SequentialSampler
+from torch.utils.data.sampler import SequentialSampler
 
 
 class CustomSampler(SequentialSampler):
@@ -116,11 +116,11 @@ def patch_sampler(trainer: Trainer):
         logger.info(f"Total samples in dataset: {len(self.train_dataset)}")
         return CustomSampler(self.train_dataset)
 
-    trainer.train_dataset = reorder_and_shuffle_data(
-        trainer.train_dataset,
-        epoch=0,
-        seed=trainer.args.seed,
-    )
+    # trainer.train_dataset = reorder_and_shuffle_data(
+    #     trainer.train_dataset,
+    #     epoch=0,
+    #     seed=trainer.args.seed,
+    # )
     trainer.add_callback(get_callback_shuffle_data(trainer))
 
     return trainer
