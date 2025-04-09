@@ -66,11 +66,11 @@ def get_callback_shuffle_data(trainer) -> TrainerCallback:
         def on_epoch_begin(self, args, state, control, train_dataloader, **kwargs):
             local_rank = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
             logger.info("[on_epoch_begin] Shuffling data, this may take a while...")
-            self.trainer.train_dataset = reorder_and_shuffle_data(
-                self.trainer.train_dataset,
-                epoch=state.epoch,
-                seed=args.seed,
-            )
+            # self.trainer.train_dataset = reorder_and_shuffle_data(
+            #     self.trainer.train_dataset,
+            #     epoch=state.epoch,
+            #     seed=args.seed,
+            # )
             logger.info("[on_epoch_begin] Data shuffled")
 
             print_sequence_lengths(self.trainer.train_dataset)
@@ -100,7 +100,7 @@ class CustomSampler(SequentialSampler):
         self.data_source = data_source
         self.ids = compute_reordered_and_shuffled_ids(
             data_source,
-            epoch=random.randint(0, 10000),
+            epoch=0,
             seed=42,
         )
 
