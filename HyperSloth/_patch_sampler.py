@@ -73,7 +73,7 @@ def get_callback_shuffle_data(trainer) -> TrainerCallback:
             # )
             logger.info("[on_epoch_begin] Data shuffled")
 
-            print_sequence_lengths(self.trainer.train_dataset)
+            # print_sequence_lengths(self.trainer.train_dataset)
 
             if local_rank == 0:
                 logger.info("[on_epoch_begin] Debugging dataloader")

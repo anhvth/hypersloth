@@ -13,15 +13,7 @@ from .hypersloth_config import HyperConfig, TrainingArgsConfig
 def init_model_and_tokenizer(hyper_config: HyperConfig):
     """Initialize and optionally set up LoRA for the model."""
     from unsloth import FastModel
-    from unsloth_zoo import compiler
-
-    # ====== Patching the compiler location to avoid race conditions as it is shared between GPUs
-    # gpu_ith = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
-
-    # compiler.UNSLOTH_COMPILE_LOCATION = ".cache/{}_{}".format(
-    #     compiler.UNSLOTH_COMPILE_LOCATION, gpu_ith
-    # )
-    logger.info(f"Using compiler location: {compiler.UNSLOTH_COMPILE_LOCATION}")
+    
     if hyper_config.pretrained_lora:
         logger.info(
             f"Loading model from {hyper_config.pretrained_lora} with LoRA weights"

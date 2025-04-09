@@ -9,7 +9,6 @@ from transformers.trainer import (
     Trainer,
     speed_metrics,
 )
-
 SLEEP_TIME = 0.05
 
 
@@ -22,18 +21,21 @@ def _patch_log(T: type):
     ]
     LOG_MMAP = {}
     HYPERSLOTH_LOCAL_RANK = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
+    n = int(os.environ["HYPERSLOTH_NUM_GPUS"])
+    logger.info("Num GPUs: {}".format(n), once=True)
+            
     HYPERSLOTH_RUN_DIR = os.environ["HYPERSLOTH_RUN_DIR"]
     for key in support_keys:
         LOG_MMAP[key] = np.memmap(
             f"{HYPERSLOTH_RUN_DIR}/log_{key}.mmap",
             dtype="float32",
             mode="w+",
-            shape=(int(os.environ["HYPERSLOTH_NUM_GPUS"]),),
+            shape=(n,),
         )
 
     @patch
     def log(
-        self: T, logs: Dict[str, float], start_time: Optional[float] = None #noqa
+        self:T, logs: Dict[str, float], start_time: Optional[float] = None # type: ignore
     ) -> None:
         """
         Log `logs` on the various objects watching training.
