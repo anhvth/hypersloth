@@ -5,10 +5,12 @@ Handles weight synchronization, model setup, and distributed training coordinati
 
 import os
 
-from HyperSloth._utils import (configure_batch_size, create_trainer,
-                               init_model_and_tokenizer)
+from HyperSloth._utils import (
+    configure_batch_size,
+    create_trainer,
+    init_model_and_tokenizer,
+)
 
-SLEEP_WAIT_DATASET_TIMEOUT = 1800
 from .hypersloth_config import HyperConfig, TrainingArgsConfig
 
 

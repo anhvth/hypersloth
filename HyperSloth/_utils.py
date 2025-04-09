@@ -13,14 +13,14 @@ from .hypersloth_config import HyperConfig, TrainingArgsConfig
 def init_model_and_tokenizer(hyper_config: HyperConfig):
     """Initialize and optionally set up LoRA for the model."""
     from unsloth import FastModel
-
-    # ====== Patching the compiler location to avoid race conditions as it is shared between GPUs
-    gpu_ith = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
     from unsloth_zoo import compiler
 
-    compiler.UNSLOTH_COMPILE_LOCATION = ".cache/{}_{}".format(
-        compiler.UNSLOTH_COMPILE_LOCATION, gpu_ith
-    )
+    # ====== Patching the compiler location to avoid race conditions as it is shared between GPUs
+    # gpu_ith = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
+
+    # compiler.UNSLOTH_COMPILE_LOCATION = ".cache/{}_{}".format(
+    #     compiler.UNSLOTH_COMPILE_LOCATION, gpu_ith
+    # )
     logger.info(f"Using compiler location: {compiler.UNSLOTH_COMPILE_LOCATION}")
     if hyper_config.pretrained_lora:
         logger.info(
@@ -118,9 +118,10 @@ def get_trainer(
     """
     import os
     import time
+
     import filelock
-    from trl import SFTTrainer
     from datasets import load_from_disk
+    from trl import SFTTrainer
 
     LOCAL_RANK = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
     lock = dataset_cache_path + ".lock"
