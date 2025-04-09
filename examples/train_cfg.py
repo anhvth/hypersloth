@@ -3,7 +3,7 @@ from HyperSloth.hypersloth_config import *
 # Main configuration using Pydantic models
 hyper_config_model = HyperConfig(
     data=DataConfig(
-        dataset_name_or_path='/mnt/data/anhvth5/shared-mnt/data/localization/sharegpt_game_631k_messsages.json',
+        dataset_name_or_path='/shared-mnt/data/localization/sharegpt_game_631k_messsages.json',
         group_by_length=True,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
@@ -11,7 +11,7 @@ hyper_config_model = HyperConfig(
         test_ratio=0.01
     ),
     training=TrainingConfig(
-        gpus=[4],
+        gpus=range(1),
         loss_type="response_only",  # Choices: ["all", "response_only"], the loss will only be calculated on the response part of the input
     ),
     fast_model_args=FastModelArgs(
@@ -30,7 +30,7 @@ hyper_config_model = HyperConfig(
 training_config_model = TrainingArgsConfig(
     output_dir="/shared-mnt/loras/",
     per_device_train_batch_size=1,
-    gradient_accumulation_steps=1,  # Meaing 8*4*4=128 examples per step
+    gradient_accumulation_steps=4,  # Meaing 8*4*4=128 examples per step
     num_train_epochs=1,
     learning_rate=1e-4,
     eval_steps=100000,
