@@ -156,7 +156,7 @@ def get_trainer(
         # We use a dataset_kwargs override so that, once the dataset is prepared,
         # it won't attempt the same "prepare" logic again.
         hf_train_args.dataset_kwargs = {"skip_prepare_dataset": skip_prepare}
-        if LOCAL_RANK != 0:
+        if LOCAL_RANK != 0 or eval_dataset is None:
             hf_train_args.eval_strategy = "no"
         return SFTTrainer(
             model=model,
