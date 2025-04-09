@@ -11,7 +11,7 @@ hyper_config_model = HyperConfig(
         test_ratio=0.01
     ),
     training=TrainingConfig(
-        gpus=[4,5,6,7],
+        gpus=[4],
         loss_type="response_only",  # Choices: ["all", "response_only"], the loss will only be calculated on the response part of the input
     ),
     fast_model_args=FastModelArgs(
