@@ -30,6 +30,37 @@ def get_chat_dataset(
 
     Returns train dataset and optional test dataset (if test_ratio > 0).
     """
+    if isinstance(dataset_name_or_path, list):
+        # load one by one then merge
+        train_datasets = []
+        test_datasets = []
+        for dataset_path in dataset_name_or_path:
+            train_dataset, test_dataset = get_chat_dataset(
+                dataset_path,
+                split=split,
+                num_samples=num_samples,
+                test_ratio=test_ratio,
+                tokenizer=tokenizer,
+                message_key=message_key,
+                chat_template=chat_template,
+                dataset_already_formated=dataset_already_formated,
+                **kwargs,
+            )
+            train_datasets.append(train_dataset.to_list())
+            if test_dataset:
+                test_datasets.append(test_dataset.to_list())
+        # # Merge datasets
+        ds_train = Dataset.from_list(
+            [item for sublist in train_datasets for item in sublist]
+        )
+        if test_datasets:
+            ds_test = Dataset.from_list(
+                [item for sublist in test_datasets for item in sublist]
+            )
+        else:
+            ds_test = None
+        return ds_train, ds_test
+        # return ds_train, ds_test
     # Load dataset based on input type
     if os.path.exists(dataset_name_or_path):
         if dataset_name_or_path.endswith(".json"):

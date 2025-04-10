@@ -21,7 +21,12 @@ def get_run_id(hyper_config_model, training_config_model):
     Generate a descriptive and concise run ID based on the hyperparameters and training configuration.
     """
     model_name = hyper_config_model.fast_model_args.model_name.split("/")[-1]
-    dataset = hyper_config_model.data.dataset_name_or_path.split("/")[-1].split('.')[0]
+    if isinstance(hyper_config_model.data.dataset_name_or_path, list):
+        dataset = "_".join(
+            [path.split("/")[-1].split(".")[0] for path in hyper_config_model.data.dataset_name_or_path]
+        )
+    else:
+        dataset = hyper_config_model.data.dataset_name_or_path.split("/")[-1].split('.')[0]
     loss_type = hyper_config_model.training.loss_type
     lora_r = hyper_config_model.lora_args.r
     lora_alpha = hyper_config_model.lora_args.lora_alpha
@@ -249,6 +254,8 @@ def initialize_training_config(config_file):
     a child process that trains on a single GPU. Otherwise, 
     we spawn multi-gpu runs either by generating a tmux script or by multi-process.
     """
+    os.system("tmux kill-session -t train_hp")
+    
     config_file = os.path.abspath(config_file)
     assert os.path.exists(config_file), f"Config file {config_file} not found"
 
