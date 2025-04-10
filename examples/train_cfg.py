@@ -16,7 +16,7 @@ hyper_config_model = HyperConfig(
         
     ),
     fast_model_args=FastModelArgs(
-        model_name="/shared-mnt/models/unsloth_translation-v3-ft",
+        model_name="/shared-mnt/models/unsloth_translation-v3-base/",
         max_seq_length=4096,
     ),
     # pretrained_lora="/shared-mnt/loras/gemma-3-27b-it-bnb-4bit_teacher_messages_deepseek_direct/loss_response_only_lora_r16_a16_seq_7000_lr_0_0001_global_bz_16_epochs_2_seed_42_mmap/",
