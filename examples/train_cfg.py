@@ -6,11 +6,12 @@ hyper_config_model = HyperConfig(
         dataset_name_or_path=[
             "/home/anhvth5/LLaMA-Factory/data/translation_v3_seql_4k_packing.json",
             "/home/anhvth5/LLaMA-Factory/data/translation_v3.1.refine_4k.json",
+            "/shared-mnt/data/sharegpt/game_multilingal_synthetic_10k.packing_seql4k.json"
         ],
         group_by_length=True,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
-        num_samples=50000,
+        num_samples=1000,
         test_ratio=0.01,
     ),
     training=TrainingConfig(
@@ -18,10 +19,10 @@ hyper_config_model = HyperConfig(
         loss_type="response_only",  # Choices: ["all", "response_only"], the loss will only be calculated on the response part of the input
     ),
     fast_model_args=FastModelArgs(
-        model_name="unsloth/gemma-3-12b-it-bnb-4bit",
+        model_name="unsloth/gemma-3-27b-it-bnb-4bit",
         max_seq_length=4096,
     ),
-    # pretrained_lora="/shared-mnt/loras/gemma-3-27b-it-bnb-4bit_teacher_messages_deepseek_direct/loss_response_only_lora_r16_a16_seq_7000_lr_0_0001_global_bz_16_epochs_2_seed_42_mmap/",
+    pretrained_lora="/loras/translation_v3_ft_27b_ckpt_400",
     lora_args=LoraArgs(
         r=16,
         lora_alpha=16,
@@ -30,7 +31,7 @@ hyper_config_model = HyperConfig(
 
 # Training arguments using Pydantic model
 training_config_model = TrainingArgsConfig(
-    output_dir="/shared-mnt/loras/",
+    output_dir="/shared-mnt/hypersloth_loras/",
     per_device_train_batch_size=1,
     gradient_accumulation_steps=8,  # Meaing 8*4*4=128 examples per step
     num_train_epochs=1,
