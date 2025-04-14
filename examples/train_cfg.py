@@ -10,7 +10,7 @@ hyper_config_model = HyperConfig(
         group_by_length=True,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
-        # num_samples=100000,
+        num_samples=50000,
         test_ratio=0.01,
     ),
     training=TrainingConfig(
@@ -18,7 +18,7 @@ hyper_config_model = HyperConfig(
         loss_type="response_only",  # Choices: ["all", "response_only"], the loss will only be calculated on the response part of the input
     ),
     fast_model_args=FastModelArgs(
-        model_name="unsloth/gemma-3-27b-it",
+        model_name="unsloth/gemma-3-12b-it-bnb-4bit",
         max_seq_length=4096,
     ),
     # pretrained_lora="/shared-mnt/loras/gemma-3-27b-it-bnb-4bit_teacher_messages_deepseek_direct/loss_response_only_lora_r16_a16_seq_7000_lr_0_0001_global_bz_16_epochs_2_seed_42_mmap/",
@@ -31,8 +31,8 @@ hyper_config_model = HyperConfig(
 # Training arguments using Pydantic model
 training_config_model = TrainingArgsConfig(
     output_dir="/shared-mnt/loras/",
-    per_device_train_batch_size=16,
-    gradient_accumulation_steps=1,  # Meaing 8*4*4=128 examples per step
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=8,  # Meaing 8*4*4=128 examples per step
     num_train_epochs=1,
     learning_rate=1e-4,
     eval_steps=100000,

@@ -81,7 +81,7 @@ def _train(gpu: int, hyper_config: HyperConfig, hf_train_args: TrainingArgsConfi
         hf_train_args=hf_train_args,
     )
 
-    if len(hyper_config.training.gpus) > 0 and hyper_config.use_mmap_grad_sync is not None:
+    if len(hyper_config.training.gpus) > 1 and hyper_config.use_mmap_grad_sync is not None:
         from HyperSloth.mmap_gradient_sync import MmapGradSyncCallback
         if hyper_config.use_mmap_grad_sync:
             grad_sync_cb = MmapGradSyncCallback(
@@ -254,7 +254,6 @@ def initialize_training_config(config_file):
     a child process that trains on a single GPU. Otherwise, 
     we spawn multi-gpu runs either by generating a tmux script or by multi-process.
     """
-    os.system("tmux kill-session -t train_hp")
     
     config_file = os.path.abspath(config_file)
     assert os.path.exists(config_file), f"Config file {config_file} not found"

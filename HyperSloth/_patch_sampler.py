@@ -15,7 +15,7 @@ def compute_reordered_and_shuffled_ids(
     seed=42,
 ) -> list[int]:
     lens = [len(x["input_ids"]) for x in dataset]
-    sorted_ids = sorted(range(len(lens)), key=lambda k: lens[k])
+    # sorted_ids = sorted(range(len(lens)), key=lambda k: lens[k])
 
     from fastcore.all import chunked
 
@@ -107,20 +107,16 @@ class CustomSampler(SequentialSampler):
     def __iter__(self) -> Iterator[int]:
         return iter(self.ids)
 
-
+from speedy_utils import Clock
 def patch_sampler(trainer: Trainer):
-
+    clock = Clock(start_now=True)
     @patch
     def _get_train_sampler(self: Trainer) -> CustomSampler:
         """Get a custom sampler for the training dataset."""
         logger.info(f"Total samples in dataset: {len(self.train_dataset)}")
         return CustomSampler(self.train_dataset)
 
-    # trainer.train_dataset = reorder_and_shuffle_data(
-    #     trainer.train_dataset,
-    #     epoch=0,
-    #     seed=trainer.args.seed,
-    # )
-    trainer.add_callback(get_callback_shuffle_data(trainer))
 
+    trainer.add_callback(get_callback_shuffle_data(trainer))
+    clock.log_elapsed_time()
     return trainer
