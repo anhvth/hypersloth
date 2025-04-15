@@ -9,25 +9,22 @@ from datasets import load_dataset
 from typing import Any
 
 from datasets import load_dataset
-from speedy_utils import load_by_ext, log, multi_thread
-from speedy_utils import jloads, jdumps
+from speedy_utils import jdumps, jloads, load_by_ext, log
+
 
 warnings.filterwarnings("ignore", category=UserWarning)
-R = random.Random(42)  # Set a random seed for reproducibility
 
 
-def shuffle_one_messages(messages):
-    ratio = 0.5
-    if random.random() < ratio:
-        return messages
-    # find the where the turn role is user and content is json string then use jloads to load it->dict, then shuffle the keys (augmentation)
-    for message in messages:
-        if message["role"] == "user":
-            try:
-                message["content"] = jloads(message["content"])
-                # shuffle the keys
-                keys = list(message["content"].keys())
-                if len(keys) > 1:
+def shuffle_one_messages(one_row):
+    list_convs = one_row["messages"]
+    for conv in list_convs:
+        for message in conv:
+            if message["role"] == "user":
+                # try:
+                    # shuffle the keys
+                    data_content = jloads(message["content"])
+                    keys = list(data_content.keys())
+                    # if len(keys) > 1:
                     shuffled_keys = keys[:]
                     old_order = shuffled_keys[:]
                     random.shuffle(shuffled_keys)
@@ -37,12 +34,10 @@ def shuffle_one_messages(messages):
                         level="info",
                         once=True,
                     )
-                    message["content"] = jdumps(
-                        {k: message["content"][k] for k in shuffled_keys}
-                    )
-            except Exception as e:
-                log(f"Error while shuffling dict keys: {e}", level="warning", once=True)
-    return messages
+                    shuffled_data = {k: data_content[k] for k in shuffled_keys}
+                    message["content"] = jdumps(shuffled_data)
+    return one_row
+
 
 
 def get_chat_dataset(
@@ -54,7 +49,7 @@ def get_chat_dataset(
     message_key: str = None,
     chat_template=None,
     dataset_already_formated=False,  # when there already a "text" key in the dataset
-    shuffle_user_dict_keys=False,
+    shuffle_user_dict_keys: bool = False,
     **kwargs,
 ) -> tuple[Dataset, Dataset | None]:
     """
@@ -111,7 +106,6 @@ def get_chat_dataset(
     else:
         try:
             from unsloth_zoo.dataset_utils import standardize_data_formats
-
             dataset = load_dataset(dataset_name_or_path, split=split)
             # Check if dataset is empty
             dataset[0]
@@ -140,14 +134,7 @@ def get_chat_dataset(
         num_samples = min(num_samples, len(dataset))
         dataset = dataset.shuffle(seed=42)
         dataset = dataset.select(range(num_samples))
-    if shuffle_user_dict_keys or 1:
-        # Shuffle the keys of the user dict in the messages
-        log("Shuffling the keys of the user dict in the messages", level="info")
-        dataset = dataset.map(
-            lambda x: {"messages": shuffle_user_dict_keys(x["messages"])},
-            batched=True,
-            remove_columns=["messages"],
-        )
+
     if tokenizer:
 
         def apply_chat_template(examples):
@@ -173,12 +160,16 @@ def get_chat_dataset(
                 tokenizer.chat_template = AutoTokenizer.from_pretrained(
                     chat_template
                 ).chat_template
-
+            
             texts = tokenizer.apply_chat_template(
                 examples[messages_key], tokenize=False
             )
             return {"text": texts}
-
+        if shuffle_user_dict_keys or 1:
+            log(
+                "Shuffling user dict keys in the dataset", level="info", once=True
+            )
+            dataset = dataset.map(shuffle_one_messages, batched=True)
         try:
             dataset = dataset.map(apply_chat_template, batched=True)
         except Exception as e:
@@ -195,9 +186,7 @@ def get_chat_dataset(
     if test_ratio > 0:
         ds = dataset.train_test_split(test_size=test_ratio, shuffle=True, seed=42)
         ds_train, ds_test = ds["train"], ds["test"]
-        log(
-            f"Splitting dataset into train and test sets, test_ratio={test_ratio}, seed=42, Num test samples={len(ds_test)}"
-        )
+        log(f'Splitting dataset into train and test sets, test_ratio={test_ratio}, seed=42, Num test samples={len(ds_test)}')
     else:
         ds_train, ds_test = dataset, None
 
