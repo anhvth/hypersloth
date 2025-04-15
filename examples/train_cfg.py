@@ -5,7 +5,7 @@ hyper_config_model = HyperConfig(
     data=DataConfig(
         dataset_name_or_path=[
             "/home/anhvth5/LLaMA-Factory/data/translation_v3_seql_4k_packing.json",
-            "/home/anhvth5/LLaMA-Factory/data/translation_v3.1.refine_4k.json",
+            "/shared-mnt/data/localization/translation_v3_refine_12484_packing_4k.json",
             "/shared-mnt/data/sharegpt/game_multilingal_synthetic_10k.packing_seql4k.json"
         ],
         group_by_length=True,
