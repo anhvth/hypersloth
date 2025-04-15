@@ -203,12 +203,21 @@ tmux new-session -d -s {session_name} -n MAIN"""
 
     is_session_exists = os.system(f"tmux has-session -t {session_name}")
     if is_session_exists == 0:
+
         logger.warning(
             f"Session {session_name} exists, please kill it before running the script"
         )
-    else:
-        os.system(f"bash {script_path}")
-        logger.info(f"Script started with session name {session_name}")
+        # as user if they want to kill the session
+        user_input = input(
+            f"Session {session_name} exists, do you want to kill it? (y/n): "
+        )
+        if user_input.lower() == "y":
+            os.system(f"tmux kill-session -t {session_name}")
+            logger.info(f"Session {session_name} killed")
+        else:
+            return
+    os.system(f"bash {script_path}")
+    logger.info(f"Script started with session name {session_name}")
 
 
 @call_parse

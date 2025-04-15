@@ -13,16 +13,17 @@ hyper_config_model = HyperConfig(
         response_part="<start_of_turn>model\n",
         num_samples=1000,
         test_ratio=0.01,
+        shuffle_user_dict_keys=True,
     ),
     training=TrainingConfig(
         gpus=range(8),
         loss_type="response_only",  # Choices: ["all", "response_only"], the loss will only be calculated on the response part of the input
     ),
     fast_model_args=FastModelArgs(
-        model_name="/data-4090/hf-models/unsloth_gemma-3-27b-it-bnb-4bit",
+        model_name="unsloth/gemma-3-4b-it-bnb-4bit",
         max_seq_length=4096,
     ),
-    pretrained_lora="saves/translation_v3_ft_27b_ckpt_400",
+    # pretrained_lora="saves/translation_v3_ft_27b_ckpt_400",
     lora_args=LoraArgs(
         r=16,
         lora_alpha=16,
