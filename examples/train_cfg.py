@@ -19,10 +19,10 @@ hyper_config_model = HyperConfig(
         loss_type="response_only",  # Choices: ["all", "response_only"], the loss will only be calculated on the response part of the input
     ),
     fast_model_args=FastModelArgs(
-        model_name="unsloth/gemma-3-27b-it-bnb-4bit",
+        model_name="/data-4090/hf-models/unsloth_gemma-3-27b-it-bnb-4bit",
         max_seq_length=4096,
     ),
-    pretrained_lora="/loras/translation_v3_ft_27b_ckpt_400",
+    pretrained_lora="saves/translation_v3_ft_27b_ckpt_400",
     lora_args=LoraArgs(
         r=16,
         lora_alpha=16,
@@ -33,9 +33,9 @@ hyper_config_model = HyperConfig(
 training_config_model = TrainingArgsConfig(
     output_dir="/shared-mnt/hypersloth_loras/",
     per_device_train_batch_size=1,
-    gradient_accumulation_steps=8,  # Meaing 8*4*4=128 examples per step
+    gradient_accumulation_steps=2,  # Meaing 8*4*4=128 examples per step
     num_train_epochs=1,
-    learning_rate=1e-4,
+    learning_rate=1e-5,
     eval_steps=100000,
     logging_steps=1,
     report_to="tensorboard",
