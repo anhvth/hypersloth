@@ -115,7 +115,7 @@ class Flag:
             time.sleep(SLEEP_TIME) # Sleep outside the lock
 
         # Optional: Debug log when successful (outside lock)
-        logger.debug(f"[Flag={self.file_path}] all ranks ready at step={step}")
+        # logger.debug(f"[Flag={self.file_path}] all ranks ready at step={step}")
 
 
     def wait_for_reset(self, rank: int, step: int = -1, timeout: float = TIME_OUT):
@@ -152,7 +152,7 @@ class Flag:
         with self.lock:
             self.mem[:] = 0.0
             self.mem.flush()
-        logger.debug(f"[Flag={self.file_path}] Master reset flags.")
+        # logger.debug(f"[Flag={self.file_path}] Master reset flags.")
 
 # --- End of Flag class definition ---
 
@@ -201,7 +201,7 @@ def _patch_log(T: type):
             # Master creates/truncates the file
             if is_main:
                  with LOG_LOCKS[key]:
-                     logger.debug(f"Master creating/truncating {mmap_path} for {n} GPUs.")
+                     # logger.debug(f"Master creating/truncating {mmap_path} for {n} GPUs.")
                      with open(mmap_path, "wb") as f:
                          f.truncate(n * 4) # float32 = 4 bytes
             else:
@@ -226,9 +226,9 @@ def _patch_log(T: type):
                             shape=(n,),
                         )
                         file_ready = True
-                        logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} successfully mapped {mmap_path}")
+                        # logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} successfully mapped {mmap_path}")
                     else:
-                         # logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} waiting for {mmap_path}. Size: {os.path.getsize(mmap_path) if os.path.exists(mmap_path) else 'N/A'}, Expected: {expected_size}")
+                         # # logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} waiting for {mmap_path}. Size: {os.path.getsize(mmap_path) if os.path.exists(mmap_path) else 'N/A'}, Expected: {expected_size}")
                          time.sleep(SLEEP_TIME)
                 except FileNotFoundError:
                     time.sleep(SLEEP_TIME)
@@ -310,11 +310,11 @@ def _patch_log(T: type):
                     #    with LOG_LOCKS[key]:
                     #       LOG_MMAP[key][HYPERSLOTH_LOCAL_RANK] = 0.0 # Or np.nan
                     #       LOG_MMAP[key].flush()
-                logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} wrote logs to mmap at step {current_step}")
+                # logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} wrote logs to mmap at step {current_step}")
 
                 # 2. Signal that this rank has written its data
                 log_sync_flag.update(HYPERSLOTH_LOCAL_RANK)
-                logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} updated log sync flag at step {current_step}")
+                # logger.debug(f"Rank {HYPERSLOTH_LOCAL_RANK} updated log sync flag at step {current_step}")
 
             except Exception as e:
                 logger.error(f"Rank {HYPERSLOTH_LOCAL_RANK} failed during mmap write or flag update at step {current_step}: {e}")
@@ -324,9 +324,9 @@ def _patch_log(T: type):
             if is_main:
                 try:
                     # Wait for all ranks to write and signal
-                    logger.debug(f"Master waiting for all ranks on log sync flag at step {current_step}")
+                    # logger.debug(f"Master waiting for all ranks on log sync flag at step {current_step}")
                     log_sync_flag.wait_for_all(step=current_step)
-                    logger.debug(f"Master confirmed all ranks ready at step {current_step}")
+                    # logger.debug(f"Master confirmed all ranks ready at step {current_step}")
 
                     # Aggregate results from mmaps (with locks)
                     aggregated_logs = logs.copy() # Start with local logs (contains epoch, etc.)
@@ -344,7 +344,7 @@ def _patch_log(T: type):
                          else: # Default: sum (e.g., loss, grad_norm - assuming additive makes sense)
                              aggregated_logs[key] = float(all_vals.sum())
 
-                    logger.debug(f"Master aggregated logs at step {current_step}: {aggregated_logs}")
+                    # logger.debug(f"Master aggregated logs at step {current_step}: {aggregated_logs}")
 
 
                     # Call the actual logging handlers (TensorBoard, etc.) with aggregated logs
@@ -360,7 +360,7 @@ def _patch_log(T: type):
 
                     # Reset the flag to signal workers they can proceed
                     log_sync_flag.reset()
-                    logger.debug(f"Master finished logging and reset flag at step {current_step}")
+                    # logger.debug(f"Master finished logging and reset flag at step {current_step}")
 
                 except Exception as e:
                     logger.error(f"Master failed during log aggregation/reset at step {current_step}: {e}")
@@ -375,9 +375,9 @@ def _patch_log(T: type):
             else: # Worker process
                 try:
                     # Wait for the master to finish processing and reset the flag
-                    logger.debug(f"Worker {HYPERSLOTH_LOCAL_RANK} waiting for flag reset at step {current_step}")
+                    # logger.debug(f"Worker {HYPERSLOTH_LOCAL_RANK} waiting for flag reset at step {current_step}")
                     log_sync_flag.wait_for_reset(rank=HYPERSLOTH_LOCAL_RANK, step=current_step)
-                    logger.debug(f"Worker {HYPERSLOTH_LOCAL_RANK} detected flag reset at step {current_step}")
+                    # logger.debug(f"Worker {HYPERSLOTH_LOCAL_RANK} detected flag reset at step {current_step}")
                 except Exception as e:
                     logger.error(f"Worker {HYPERSLOTH_LOCAL_RANK} failed waiting for flag reset at step {current_step}: {e}")
                     # Handle error - worker might be stuck or proceed with inconsistent state
@@ -386,7 +386,7 @@ def _patch_log(T: type):
         # These typically don't need aggregation across ranks in the same way.
         # The original code calls on_log only on the main process for these.
         elif is_main:
-             logger.debug(f"Master logging non-training step {current_step}: {logs}")
+             # logger.debug(f"Master logging non-training step {current_step}: {logs}")
              self.control = self.callback_handler.on_log(
                  self.args, self.state, self.control, logs
              )

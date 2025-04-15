@@ -15,19 +15,18 @@ if not "HYPERSLOTH_CACHE_DIR" in os.environ:
 warnings.filterwarnings("ignore")
 
 
-
 def get_run_id(hyper_config_model, training_config_model):
     """
     Generate a shorter run ID and prepend a yyyy_mm_dd/ folder.
     """
     import datetime
-    
+
     # Get today's date in yyyy_mm_dd format
     today_str = datetime.datetime.now().strftime("%Y_%m_%d")
-    
+
     # Shortened model name (last part only)
     model_name = hyper_config_model.fast_model_args.model_name.split("/")[-1]
-    
+
     # Shortened dataset name (list or single)
     if isinstance(hyper_config_model.data.dataset_name_or_path, list):
         dataset = "_".join(
@@ -35,28 +34,29 @@ def get_run_id(hyper_config_model, training_config_model):
             for path in hyper_config_model.data.dataset_name_or_path
         )
     else:
-        dataset = hyper_config_model.data.dataset_name_or_path.split("/")[-1].split(".")[0]
-    
+        dataset = hyper_config_model.data.dataset_name_or_path.split("/")[-1].split(
+            "."
+        )[0]
+
     # Gather relevant config fields
-    loss_type  = hyper_config_model.training.loss_type
-    lora_r     = hyper_config_model.lora_args.r
+    loss_type = hyper_config_model.training.loss_type
+    lora_r = hyper_config_model.lora_args.r
     lora_alpha = hyper_config_model.lora_args.lora_alpha
-    seq_len    = hyper_config_model.fast_model_args.max_seq_length
-    lr         = training_config_model.learning_rate
+    seq_len = hyper_config_model.fast_model_args.max_seq_length
+    lr = training_config_model.learning_rate
     batch_size = training_config_model.per_device_train_batch_size
     accum_steps = training_config_model.gradient_accumulation_steps
-    ngpu       = len(hyper_config_model.training.gpus)
-    epochs     = training_config_model.num_train_epochs
-    
-    
+    ngpu = len(hyper_config_model.training.gpus)
+    epochs = training_config_model.num_train_epochs
+
     # Calculate global batch size
     global_bz = batch_size * accum_steps * ngpu
-    
+
     # Construct a shorter run ID string
     # (Feel free to adjust abbreviations as desired)
     # Example: "ls-xx_r4_a32_sq1024_lr3e-5_bz128_ep10_sd42_mmap4"
     short_run_id = (
-        f"ls-{loss_type}"    # e.g. "ls-crossentropy" -> you might abbreviate "ce"
+        f"ls-{loss_type}"  # e.g. "ls-crossentropy" -> you might abbreviate "ce"
         f"_r{lora_r}"
         f"_a{lora_alpha}"
         f"_sq{seq_len}"
@@ -65,16 +65,16 @@ def get_run_id(hyper_config_model, training_config_model):
         f"_ep{epochs}"
         f"_{ngpu}"
     )
-    
+
     # Normalize to remove periods and dashes
     short_run_id = short_run_id.replace(".", "_").replace("-", "_")
-    
+
     # Final name: prepend yyyy_mm_dd + model + dataset + short_run_id
     # Example: "2023_07_01/modelname_dataset_ls-crossentropy_r4_a32..."
     # Return it as one string; or you could keep returning a tuple
-    final_run_id = f"{today_str}/{model_name}_{dataset}_{short_run_id}"
-    model_name_dataset = f"{model_name}_{dataset}"
-    return model_name_dataset, final_run_id
+    final_run_id = f"{model_name}_{dataset}_{short_run_id}"
+    # model_name_dataset = f"{model_name}_{dataset}"
+    return f"{model_name}_{today_str}", final_run_id
 
 
 def _get_hp_grad_dir(model_name_dataset, run_id):
