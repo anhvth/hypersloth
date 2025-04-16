@@ -6,12 +6,13 @@ hyper_config_model = HyperConfig(
         dataset_name_or_path=[
             "/home/anhvth5/LLaMA-Factory/data/translation_v3_seql_4k_packing.json",
             "/shared-mnt/data/localization/translation_v3_refine_12484_packing_4k.json",
-            "/shared-mnt/data/sharegpt/game_multilingal_synthetic_12k_gpt4p1_packing_seql4k.json"
+            "/shared-mnt/data/sharegpt/game_multilingal_synthetic_12k_gpt4p1_packing_seql4k.json",
+            "/shared-mnt/data/sharegpt/train_ds_spliter_sql4k.json"
         ],
         group_by_length=True,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
-        num_samples=1000,
+        num_samples=700,
         test_ratio=0.01,
         shuffle_user_dict_keys=True,
     ),

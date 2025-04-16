@@ -20,8 +20,9 @@ def shuffle_one_messages(one_row):
     for conv in list_convs:
         for message in conv:
             if message["role"] == "user":
-                # try:
-                    # shuffle the keys
+                if random.random() < 0.5:
+                    continue
+                try:
                     data_content = jloads(message["content"])
                     keys = list(data_content.keys())
                     # if len(keys) > 1:
@@ -36,6 +37,8 @@ def shuffle_one_messages(one_row):
                     )
                     shuffled_data = {k: data_content[k] for k in shuffled_keys}
                     message["content"] = jdumps(shuffled_data)
+                except Exception as e:
+                    pass
     return one_row
 
 
