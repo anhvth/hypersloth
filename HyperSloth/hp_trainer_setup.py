@@ -43,29 +43,29 @@ def setup_model_and_training(
     # Get enhanced logger for timing
     from .logging_config import setup_hypersloth_logger
 
-    enhanced_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
+    hp_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
 
     # Start total setup timing
-    enhanced_logger.start_timing("total_setup")
+    hp_logger.start_timing("total_setup")
 
     _change_compiler_location()
 
     # Time batch size configuration
-    enhanced_logger.start_timing("batch_size_config")
+    hp_logger.start_timing("batch_size_config")
     configure_batch_size(hf_train_args, gpu_ith, num_gpus)
-    enhanced_logger.finish_timing("batch_size_config")
+    hp_logger.finish_timing("batch_size_config")
 
     # Time model initialization
-    enhanced_logger.start_timing("model_init")
+    hp_logger.start_timing("model_init")
     model, tokenizer = init_model_and_tokenizer(hyper_config)
-    enhanced_logger.finish_timing("model_init")
+    hp_logger.finish_timing("model_init")
 
     # Time trainer creation
-    enhanced_logger.start_timing("trainer_creation")
+    hp_logger.start_timing("trainer_creation")
     trainer = create_trainer(tokenizer, hyper_config, hf_train_args, gpu_ith, model)
-    enhanced_logger.finish_timing("trainer_creation")
+    hp_logger.finish_timing("trainer_creation")
 
     # Finish total setup timing
-    enhanced_logger.finish_timing("total_setup")
+    hp_logger.finish_timing("total_setup")
 
     return trainer, model, tokenizer

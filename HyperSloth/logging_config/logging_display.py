@@ -12,6 +12,11 @@ from rich.text import Text
 class DisplayMixin:
     """Mixin class for display functionality."""
 
+    # Optional attributes that may be provided by classes using this mixin
+    gpu_id: Optional[str] = None
+    formatter: Optional[Any] = None
+    logger: Optional[Any] = None
+
     def __init__(self):
         self.console = Console()
 
@@ -21,7 +26,8 @@ class DisplayMixin:
         """Log configuration in organized tables."""
         sections = self._get_config_sections()
 
-        if hasattr(self, "gpu_id") and self.gpu_id == "0":
+        gpu_id = getattr(self, "gpu_id", None)
+        if gpu_id == "0":
             self.console.print(f"\n[bold blue]{title}[/bold blue]")
 
             for section_name, keys in sections.items():
@@ -128,7 +134,8 @@ class DisplayMixin:
         output_dir: str,
     ) -> None:
         """Log training start information in a formatted way."""
-        if hasattr(self, "gpu_id") and self.gpu_id == "0":
+        gpu_id = getattr(self, "gpu_id", None)
+        if gpu_id == "0":
             panel_content = self._create_training_start_content(
                 num_examples,
                 num_epochs,
@@ -188,7 +195,8 @@ class DisplayMixin:
 
     def log_performance_metrics(self, metrics: Dict[str, float]) -> None:
         """Log performance metrics in a formatted table."""
-        if hasattr(self, "gpu_id") and self.gpu_id == "0":
+        gpu_id = getattr(self, "gpu_id", None)
+        if gpu_id == "0":
             table = Table(
                 title="[bold green]🏁 Training Complete - Performance Metrics[/bold green]",
                 show_header=True,
@@ -229,18 +237,23 @@ class DisplayMixin:
         tokens_per_sec: Optional[float] = None,
     ) -> None:
         """Log training step with enhanced formatting."""
-        if hasattr(self, "formatter"):
-            progress_msg = self.formatter.format_progress_step(
+        formatter = getattr(self, "formatter", None)
+        logger = getattr(self, "logger", None)
+
+        if formatter is not None and logger is not None:
+            progress_msg = formatter.format_progress_step(
                 step, loss, lr, grad_norm, epoch, tokens_per_sec
             )
-            if hasattr(self, "logger"):
-                self.logger.info(progress_msg)
+            logger.info(progress_msg)
 
     def log_model_info(self, model_name: str, num_params: Optional[int] = None) -> None:
         """Log model information."""
-        if hasattr(self, "formatter") and hasattr(self, "logger"):
-            model_info = self.formatter.format_model_info(model_name, num_params)
-            self.logger.info(model_info)
+        formatter = getattr(self, "formatter", None)
+        logger = getattr(self, "logger", None)
+
+        if formatter is not None and logger is not None:
+            model_info = formatter.format_model_info(model_name, num_params)
+            logger.info(model_info)
 
     def log_dataset_info(
         self,
@@ -249,18 +262,24 @@ class DisplayMixin:
         cache_path: Optional[str] = None,
     ) -> None:
         """Log dataset information."""
-        if hasattr(self, "formatter") and hasattr(self, "logger"):
-            dataset_info = self.formatter.format_dataset_info(
+        formatter = getattr(self, "formatter", None)
+        logger = getattr(self, "logger", None)
+
+        if formatter is not None and logger is not None:
+            dataset_info = formatter.format_dataset_info(
                 train_size, eval_size, cache_path
             )
-            self.logger.info(dataset_info)
+            logger.info(dataset_info)
 
     def log_gpu_info(self, gpu: int, world_size: int, model_name: str = "") -> None:
         """Log GPU-specific information."""
-        rank_info = f"GPU {gpu} (Rank {self.gpu_id}/{world_size-1})"
+        gpu_id = getattr(self, "gpu_id", None)
+        logger = getattr(self, "logger", None)
+
+        rank_info = f"GPU {gpu} (Rank {gpu_id}/{world_size-1})"
 
         if model_name:
             rank_info += f" | Model: {model_name}"
 
-        if hasattr(self, "logger"):
-            self.logger.info(f"🔧 {rank_info}")
+        if logger is not None:
+            logger.info(f"🔧 {rank_info}")

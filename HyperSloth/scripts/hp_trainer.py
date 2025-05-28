@@ -111,14 +111,14 @@ def _train(gpu: int, hyper_config: HyperConfig, hf_train_args: TrainingArgsConfi
     os.environ["HYPERSLOTH_LOCAL_GPU_IDX"] = str(gpu)
 
     # Setup enhanced logger
-    enhanced_logger = setup_hypersloth_logger(gpu_id=str(gpu))
+    hp_logger = setup_hypersloth_logger(gpu_id=str(gpu))
 
     hf_train_args.output_dir = os.path.join(
         hf_train_args.output_dir, *get_run_id(hyper_config, hf_train_args)
     )
 
     # Use enhanced logging
-    enhanced_logger.log_gpu_info(
+    hp_logger.log_gpu_info(
         gpu=gpu,
         world_size=len(hyper_config.training.gpus),
         model_name=hyper_config.fast_model_args.model_name,
@@ -127,19 +127,19 @@ def _train(gpu: int, hyper_config: HyperConfig, hf_train_args: TrainingArgsConfi
     logger.info(f"Training on GPU {gpu} with output_dir {hf_train_args.output_dir}")
 
     # Start total training timer
-    enhanced_logger.start_total_training_timer()
+    hp_logger.start_total_training_timer()
 
     # setup_nccl_for_hypersloth(gpu, hyper_config.training.gpus)
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
-    enhanced_logger.start_timing("model_and_training_setup")
+    hp_logger.start_timing("model_and_training_setup")
     trainer, model, tokenizer = setup_model_and_training(
         hyper_config=hyper_config,
         hf_train_args=hf_train_args,
     )
-    enhanced_logger.finish_timing("model_and_training_setup")
+    hp_logger.finish_timing("model_and_training_setup")
 
-    enhanced_logger.start_timing("callback_setup")
+    hp_logger.start_timing("callback_setup")
     grad_sync_cb = HyperSlothNCCLGradSyncCallback.create_for_hypersloth(
         model=trainer.model,
         grad_dir=os.environ["HYPERSLOTH_RUN_DIR"],
@@ -148,22 +148,22 @@ def _train(gpu: int, hyper_config: HyperConfig, hf_train_args: TrainingArgsConfi
     )
     logger.info(f"Using gradient sync callback for GPU {gpu}")
     trainer.add_callback(grad_sync_cb)
-    enhanced_logger.finish_timing("callback_setup")
+    hp_logger.finish_timing("callback_setup")
 
-    enhanced_logger.start_timing("actual_training")
+    hp_logger.start_timing("actual_training")
     trainer.train()
-    enhanced_logger.finish_timing("actual_training")
+    hp_logger.finish_timing("actual_training")
 
     # Save once from rank=0
     if gpu == hyper_config.training.gpus[0]:
-        enhanced_logger.start_timing("model_saving")
+        hp_logger.start_timing("model_saving")
         logger.info(f"Save model to {hf_train_args.output_dir}")
         model.save_pretrained(hf_train_args.output_dir)
         tokenizer.save_pretrained(hf_train_args.output_dir)
-        enhanced_logger.finish_timing("model_saving")
+        hp_logger.finish_timing("model_saving")
 
         # Log training summary
-        enhanced_logger.log_training_summary()
+        hp_logger.log_training_summary()
 
 
 def load_config_from_path(config_path: str):

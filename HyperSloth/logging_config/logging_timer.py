@@ -45,13 +45,15 @@ class TimingMixin:
             self.step_durations[step_name] = []
 
         if hasattr(self, "logger"):
-            self.logger.debug(f"⏱️  Started timing: {step_name}")
+            self.logger.opt(depth=2).debug(f"⏱️  Started timing: {step_name}")
 
     def finish_timing(self, step_name: str, log_result: bool = True) -> float:
         """Finish timing a step and optionally log the result."""
         if step_name not in self.step_timers:
             if hasattr(self, "logger"):
-                self.logger.warning(f"⚠️  Timer '{step_name}' was not started")
+                self.logger.opt(depth=2).warning(
+                    f"⚠️  Timer '{step_name}' was not started"
+                )
             return 0.0
 
         timer = self.step_timers[step_name]
@@ -68,13 +70,13 @@ class TimingMixin:
         """Log the duration of a completed step."""
         duration_str = self._format_duration(duration)
         if hasattr(self, "logger"):
-            self.logger.info(f"⏱️  {step_name}: {duration_str}")
+            self.logger.opt(depth=2).info(f"⏱️  {step_name}: {duration_str}")
 
     def start_total_training_timer(self) -> None:
         """Start the total training timer."""
         self.total_training_start = time.time()
         if hasattr(self, "logger"):
-            self.logger.info("🚀 Starting total training timer")
+            self.logger.opt(depth=2).info("🚀 Starting total training timer")
 
     def log_training_summary(self) -> None:
         """Log a summary of all timing information."""

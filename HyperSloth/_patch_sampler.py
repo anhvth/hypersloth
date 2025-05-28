@@ -1,24 +1,29 @@
 import os
 import random
 import statistics
-from typing import Iterator
+from typing import Iterator, Union, Sized, Any
 
 from datasets import Dataset
 from fastcore.all import patch
 from torch.utils.data import SequentialSampler
-from transformers import Trainer, TrainerCallback
+from torch.utils.data.dataset import Dataset as TorchDataset
+from torch.utils.data import IterableDataset
+from transformers import Trainer, TrainerCallback  # type: ignore
 from loguru import logger
+
+# Type alias for supported dataset types
+DatasetType = Union[Dataset, TorchDataset, IterableDataset, Sized]
 
 
 def _compute_reordered_and_shuffled_ids(
-    dataset: Dataset,
+    dataset: DatasetType,
     epoch,
     seed=42,
     print_debug_table: bool = True,
 ) -> list[int]:
     from fastcore.all import chunked
 
-    lens = [len(x["input_ids"]) for x in dataset]
+    lens = [len(x["input_ids"]) for x in dataset]  # type: ignore
     sorted_ids = sorted(range(len(lens)), key=lambda k: lens[k])
 
     global_bz = int(os.environ["HYPERSLOTH_GPU_FORWARD_BATCH_SIZE"])
@@ -65,12 +70,13 @@ def log_stats(lens, chunked_ids):
 
 
 def reorder_and_shuffle_data(
-    dataset: Dataset,
+    dataset: DatasetType,
     epoch,
     seed=42,
-) -> Dataset:
+) -> DatasetType:
     ids = _compute_reordered_and_shuffled_ids(dataset, epoch, seed)
-    dataset = dataset.select(ids)
+    if hasattr(dataset, "select"):
+        dataset = dataset.select(ids)  # type: ignore
     return dataset
 
 
@@ -98,15 +104,18 @@ def get_callback_shuffle_data(trainer) -> TrainerCallback:
                 f"[Epoch {state.epoch}] Starting data shuffle and sampler update..."
             )
 
-            self.trainer.train_dataset = reorder_and_shuffle_data(
-                self.trainer.train_dataset,
-                epoch=state.epoch,
-                seed=args.seed,
-            )
+            if self.trainer.train_dataset is not None:
+                shuffled_dataset = reorder_and_shuffle_data(
+                    self.trainer.train_dataset,
+                    epoch=state.epoch,
+                    seed=args.seed,
+                )
+                # Type assertion to ensure compatibility
+                self.trainer.train_dataset = shuffled_dataset  # type: ignore
 
             # Update sampler epoch if it exists
             train_sampler = getattr(train_dataloader, "sampler", None)
-            if hasattr(train_sampler, "set_epoch"):
+            if train_sampler is not None and hasattr(train_sampler, "set_epoch"):
                 train_sampler.set_epoch(state.epoch)
 
             logger.info(
@@ -135,7 +144,7 @@ from torch.utils.data.sampler import SequentialSampler
 
 
 class CustomSampler(SequentialSampler):
-    def __init__(self, data_source) -> None:
+    def __init__(self, data_source: Any) -> None:
         self.data_source = data_source
         self.epoch = 0
         self.seed = 42
@@ -168,7 +177,9 @@ def patch_sampler(trainer: Trainer):
     @patch
     def _get_train_sampler(self: Trainer) -> CustomSampler:
         """Get a custom sampler for the training dataset."""
-        logger.info(f"Total samples in dataset: {len(self.train_dataset)}")
+        if self.train_dataset is None:
+            raise ValueError("train_dataset cannot be None")
+        logger.info(f"Total samples in dataset: {len(self.train_dataset)}")  # type: ignore
         return CustomSampler(self.train_dataset)
 
     trainer.add_callback(get_callback_shuffle_data(trainer))

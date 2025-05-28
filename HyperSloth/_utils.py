@@ -13,14 +13,14 @@ from .logging_config import setup_hypersloth_logger
 
 gpu_id = os.environ.get("HYPERSLOTH_LOCAL_RANK", "0")
 log_level = os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
-enhanced_logger = setup_hypersloth_logger(gpu_id=gpu_id, log_level=log_level)
+hp_logger = setup_hypersloth_logger(gpu_id=gpu_id, log_level=log_level)
 
 
 def init_model_and_tokenizer(hyper_config: HyperConfig):
     """Initialize and optionally set up LoRA for the model."""
     from unsloth import FastModel
 
-    enhanced_logger.start_timing("model_loading")
+    hp_logger.start_timing("model_loading")
 
     if hyper_config.pretrained_lora:
         logger.info(
@@ -32,15 +32,15 @@ def init_model_and_tokenizer(hyper_config: HyperConfig):
     model, tokenizer = FastModel.from_pretrained(
         **hyper_config.fast_model_args.model_dump()
     )
-    enhanced_logger.finish_timing("model_loading")
+    hp_logger.finish_timing("model_loading")
 
     logger.info(f"Model created at {os.environ['CUDA_VISIBLE_DEVICES']}")
 
-    enhanced_logger.start_timing("nccl_setup")
+    hp_logger.start_timing("nccl_setup")
     setup_nccl_for_hypersloth(
         gpu=int(os.environ["HYPERSLOTH_LOCAL_RANK"]), gpus=hyper_config.training.gpus
     )
-    enhanced_logger.finish_timing("nccl_setup")
+    hp_logger.finish_timing("nccl_setup")
 
     model_device = model.device
     logger.info(
@@ -51,9 +51,9 @@ def init_model_and_tokenizer(hyper_config: HyperConfig):
         not hyper_config.fast_model_args.full_finetuning
         and not hyper_config.pretrained_lora
     ):
-        enhanced_logger.start_timing("lora_setup")
+        hp_logger.start_timing("lora_setup")
         model = FastModel.get_peft_model(model, **hyper_config.lora_args.model_dump())
-        enhanced_logger.finish_timing("lora_setup")
+        hp_logger.finish_timing("lora_setup")
 
     # Allow custom chat templates
     if (
@@ -83,16 +83,16 @@ def create_trainer(
     # Get enhanced logger for timing
     from .logging_config import setup_hypersloth_logger
 
-    enhanced_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
+    hp_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
 
-    enhanced_logger.start_timing("dataset_identification")
+    hp_logger.start_timing("dataset_identification")
     dataset_cache_path = _identify_dataset_name(tokenizer, hyper_config, hf_train_args)
-    enhanced_logger.finish_timing("dataset_identification")
+    hp_logger.finish_timing("dataset_identification")
 
     dataset_cache_exists = os.path.exists(dataset_cache_path)
 
     # CASE 1: Dataset cache already exists, just load it
-    enhanced_logger.start_timing("trainer_setup")
+    hp_logger.start_timing("trainer_setup")
     trainer = get_trainer(
         tokenizer,
         hyper_config,
@@ -102,15 +102,15 @@ def create_trainer(
         dataset_cache_path,
         dataset_cache_exists,
     )
-    enhanced_logger.finish_timing("trainer_setup")
+    hp_logger.finish_timing("trainer_setup")
 
     from HyperSloth._patch_inner_training_loop import patch_inner_training_loop
     from HyperSloth._patch_sampler import patch_sampler
 
     if hyper_config.use_mmap_grad_sync:
-        enhanced_logger.start_timing("training_loop_patch")
+        hp_logger.start_timing("training_loop_patch")
         patch_inner_training_loop(trainer)
-        enhanced_logger.finish_timing("training_loop_patch")
+        hp_logger.finish_timing("training_loop_patch")
 
     patch_sampler(trainer)
     return trainer
@@ -147,17 +147,17 @@ def get_trainer(
     # Get enhanced logger for timing
     # from .logging_config import setup_hypersloth_logger
 
-    # enhanced_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
+    # hp_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
 
-    enhanced_logger.start_timing("dataset_loading_total")
-    enhanced_logger.start_timing("dataset_identification")
+    hp_logger.start_timing("dataset_loading_total")
+    hp_logger.start_timing("dataset_identification")
     dataset_cache_path = _identify_dataset_name(tokenizer, hyper_config, hf_train_args)
-    enhanced_logger.finish_timing("dataset_identification")
+    hp_logger.finish_timing("dataset_identification")
 
     dataset_cache_exists = os.path.exists(dataset_cache_path)
 
     # CASE 1: Dataset cache already exists, just load it
-    enhanced_logger.start_timing("trainer_setup")
+    hp_logger.start_timing("trainer_setup")
     trainer = get_trainer(
         tokenizer,
         hyper_config,
@@ -167,15 +167,15 @@ def get_trainer(
         dataset_cache_path,
         dataset_cache_exists,
     )
-    enhanced_logger.finish_timing("trainer_setup")
+    hp_logger.finish_timing("trainer_setup")
 
     from HyperSloth._patch_inner_training_loop import patch_inner_training_loop
     from HyperSloth._patch_sampler import patch_sampler
 
     if hyper_config.use_mmap_grad_sync:
-        enhanced_logger.start_timing("training_loop_patch")
+        hp_logger.start_timing("training_loop_patch")
         patch_inner_training_loop(trainer)
-        enhanced_logger.finish_timing("training_loop_patch")
+        hp_logger.finish_timing("training_loop_patch")
 
     patch_sampler(trainer)
     return trainer
@@ -219,7 +219,7 @@ def get_trainer(
     from datasets import load_from_disk
     from trl import SFTTrainer
 
-    enhanced_logger.start_timing("dataset_loading_total")
+    hp_logger.start_timing("dataset_loading_total")
     LOCAL_RANK = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
     lock = dataset_cache_path + ".lock"
 
@@ -247,7 +247,7 @@ def get_trainer(
     # ---------------------------
     try:
         if dataset_cache_exists:
-            enhanced_logger.start_timing("dataset_cache_loading")
+            hp_logger.start_timing("dataset_cache_loading")
             wait_counter = 0
             clock_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
             while os.path.exists(lock) and not LOCAL_RANK == 0:
@@ -266,50 +266,50 @@ def get_trainer(
                 f"GPU {gpu_ith}: Loading dataset from {dataset_cache_path}, this might take a while"
             )
             dataset = load_from_disk(dataset_cache_path)
-            enhanced_logger.finish_timing("dataset_cache_loading")
+            hp_logger.finish_timing("dataset_cache_loading")
 
             logger.info(f"GPU {gpu_ith}: Dataset loaded, Now creating trainer")
-            enhanced_logger.start_timing("trainer_creation_from_cache")
+            hp_logger.start_timing("trainer_creation_from_cache")
             trainer = _create_trainer(
                 dataset["train"], eval_dataset=dataset["eval"], skip_prepare=True
             )
-            enhanced_logger.finish_timing("trainer_creation_from_cache")
+            hp_logger.finish_timing("trainer_creation_from_cache")
             logger.info(f"GPU {gpu_ith}: Trainer created")
         # CASE 2: GPU 0 prepares dataset
         # ---------------------------
         elif gpu_ith == 0:
-            enhanced_logger.start_timing("dataset_preparation")
+            hp_logger.start_timing("dataset_preparation")
             with filelock.FileLock(lock):
                 logger.info(f"GPU {gpu_ith}: Preparing dataset -> {dataset_cache_path}")
 
                 from HyperSloth.dataset_utils import get_chat_dataset
 
-                enhanced_logger.start_timing("dataset_processing")
+                hp_logger.start_timing("dataset_processing")
                 ds_train, ds_test = get_chat_dataset(
                     tokenizer=tokenizer, **hyper_config.data.model_dump()
                 )
-                enhanced_logger.finish_timing("dataset_processing")
+                hp_logger.finish_timing("dataset_processing")
 
-                enhanced_logger.start_timing("trainer_creation_from_raw")
+                hp_logger.start_timing("trainer_creation_from_raw")
                 trainer = _create_trainer(
                     ds_train, eval_dataset=ds_test, skip_prepare=False
                 )
-                enhanced_logger.finish_timing("trainer_creation_from_raw")
+                hp_logger.finish_timing("trainer_creation_from_raw")
 
                 logger.info(f"Maybe train on responses only")
                 # import ipdb; ipdb.set_trace()
 
                 from datasets import DatasetDict
 
-                enhanced_logger.start_timing("dataset_caching")
+                hp_logger.start_timing("dataset_caching")
                 dataset_to_save = DatasetDict()
                 dataset_to_save["train"] = trainer.train_dataset
                 dataset_to_save["eval"] = trainer.eval_dataset
                 dataset_to_save.save_to_disk(dataset_cache_path)
-                enhanced_logger.finish_timing("dataset_caching")
+                hp_logger.finish_timing("dataset_caching")
 
                 logger.info(f"GPU {gpu_ith}: Dataset saved to {dataset_cache_path}")
-            enhanced_logger.finish_timing("dataset_preparation")
+            hp_logger.finish_timing("dataset_preparation")
 
             # Release the lock file
             if os.path.exists(lock):
@@ -318,7 +318,7 @@ def get_trainer(
         # CASE 3: Other GPUs wait for GPU 0
         # ---------------------------
         else:
-            enhanced_logger.start_timing("dataset_wait_for_gpu0")
+            hp_logger.start_timing("dataset_wait_for_gpu0")
             logger.info(f"GPU {gpu_ith}: Waiting for dataset to be prepared by GPU 0")
             wait_counter = 0
             clock_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
@@ -349,20 +349,20 @@ def get_trainer(
                 print()  # New line after waiting animation
             logger.info(f"GPU {gpu_ith}: Loading dataset from {dataset_cache_path}")
             dataset = load_from_disk(dataset_cache_path)
-            enhanced_logger.finish_timing("dataset_wait_for_gpu0")
+            hp_logger.finish_timing("dataset_wait_for_gpu0")
 
-            enhanced_logger.start_timing("trainer_creation_after_wait")
+            hp_logger.start_timing("trainer_creation_after_wait")
             trainer = _create_trainer(
                 dataset["train"], eval_dataset=dataset["eval"], skip_prepare=True
             )
-            enhanced_logger.finish_timing("trainer_creation_after_wait")
+            hp_logger.finish_timing("trainer_creation_after_wait")
     except Exception as e:
         raise e
     finally:
         if os.path.exists(lock):
             os.remove(lock)
     _maybe_train_on_responses_only(trainer, hyper_config)
-    enhanced_logger.finish_timing("dataset_loading_total")
+    hp_logger.finish_timing("dataset_loading_total")
     return trainer
 
 

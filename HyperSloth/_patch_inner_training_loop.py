@@ -67,7 +67,7 @@ def patch_inner_training_loop(trainer):
     # Get enhanced logger for timing
     from .logging_config import setup_hypersloth_logger
 
-    enhanced_logger = setup_hypersloth_logger(gpu_id=str(HP_LOCAL_RANK))
+    hp_logger = setup_hypersloth_logger(gpu_id=str(HP_LOCAL_RANK))
 
     @patch
     def _inner_training_loop(
@@ -431,7 +431,7 @@ def patch_inner_training_loop(trainer):
 
                 for i, inputs in enumerate(batch_samples):
                     if i == 0:  # Start timing on first batch of accumulation
-                        enhanced_logger.start_timing("forward_pass")
+                        hp_logger.start_timing("forward_pass")
 
                     inputs = select(inputs)
                     step += 1
@@ -533,15 +533,15 @@ def patch_inner_training_loop(trainer):
                         # wait until all item in NUM_ITEMS_IN_BATCH !=0
 
                         clock.update_task("2. forward")
-                        enhanced_logger.finish_timing("forward_pass", log_result=False)
-                        enhanced_logger.start_timing("gradient_sync")
+                        hp_logger.finish_timing("forward_pass", log_result=False)
+                        hp_logger.start_timing("gradient_sync")
 
                         self.control = self.callback_handler.on_pre_optimizer_step(
                             args, self.state, self.control
                         )
                         clock.update_task("3. sync gradients")
-                        enhanced_logger.finish_timing("gradient_sync", log_result=False)
-                        enhanced_logger.start_timing("optimizer_step")
+                        hp_logger.finish_timing("gradient_sync", log_result=False)
+                        hp_logger.start_timing("optimizer_step")
                         # <<<<< HYPER SLOTH=====
                         self.accelerator.gradient_state._set_sync_gradients(True)
                         # Perform allreduce before gradient update
@@ -607,16 +607,14 @@ def patch_inner_training_loop(trainer):
                             start_time,
                         )
                         clock.update_task("4. optimizer step")
-                        enhanced_logger.finish_timing(
-                            "optimizer_step", log_result=False
-                        )
+                        hp_logger.finish_timing("optimizer_step", log_result=False)
 
                         # Log step timing progress every 10 steps (only on master GPU)
                         if (
                             self.state.global_step % 10 == 0
                             and os.getenv("HYPERSLOTH_LOCAL_RANK", "0") == "0"
                         ):
-                            enhanced_logger.log_step_timing_progress(
+                            hp_logger.log_step_timing_progress(
                                 "forward_pass",
                                 self.state.global_step,
                                 self.state.max_steps,
