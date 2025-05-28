@@ -263,12 +263,10 @@ class HyperSlothLogger:
 
     def log_gpu_info(self, gpu: int, world_size: int, model_name: str = "") -> None:
         """Log GPU-specific information."""
-        rank_info = (
-            f"[bold green]GPU {gpu}[/bold green] (Rank {self.gpu_id}/{world_size-1})"
-        )
+        rank_info = f"GPU {gpu} (Rank {self.gpu_id}/{world_size-1})"
 
         if model_name:
-            rank_info += f" | Model: [cyan]{model_name}[/cyan]"
+            rank_info += f" | Model: {model_name}"
 
         self.logger.info(f"🔧 {rank_info}")
 
@@ -522,9 +520,7 @@ def setup_enhanced_logger(
     return HyperSlothLogger(gpu_id=gpu_id, log_level=log_level)
 
 
-def setup_global_safe_logger(
-    gpu_id: Optional[str] = None, log_level: str = "DEBUG"
-) -> None:
+def setup_global_safe_logger(gpu_id, log_level: str) -> None:
     """Setup a global logger that's safe to use everywhere with proper gpu_id binding."""
     # Only setup if no handlers exist or if explicitly requested
     if len(logger._core.handlers) == 0:

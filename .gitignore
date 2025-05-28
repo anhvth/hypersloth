@@ -53,9 +53,10 @@ length*.txt
 
 *.log
 test.mmap
-.gitignore
+
 *unsloth_compiled_cache*
 HyperSloth/_patch_log.py
 test.bin
 examples
 model_store/
+lm-evaluation-harness

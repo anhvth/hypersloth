@@ -11,7 +11,11 @@ from HyperSloth.hypersloth_config import HyperConfig, TrainingArgsConfig
 from speedy_utils import setup_logger
 
 # Setup a simple global logger for script-level operations
-from HyperSloth.logging_config import setup_global_safe_logger, get_safe_logger
+from HyperSloth.logging_config import (
+    HyperSlothLogger,
+    setup_global_safe_logger,
+    get_safe_logger,
+)
 
 setup_global_safe_logger(gpu_id="main", log_level="INFO")
 logger = get_safe_logger(gpu_id="main")
@@ -102,7 +106,7 @@ def _get_hp_grad_dir(model_name_dataset, run_id):
     return grad_dir
 
 
-def _setup_logger(gpu_id):
+def _setup_logger(gpu_id) -> HyperSlothLogger:
     """Setup enhanced logging for HyperSloth."""
     from HyperSloth.logging_config import setup_enhanced_logger
 
