@@ -5,7 +5,13 @@ description = ""
 authors = [{ name = "anhvth", email = "anhvth.226@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["pyyaml (>=6.0.2,<7.0.0)", "jupyterlab (>=4.3.5,<5.0.0)", "fastcore (>=1.7.29,<2.0.0)", "speedy-utils (>=0.1.20,<0.2.0)", "tensorboard (>=2.19.0,<3.0.0)"]
+dependencies = [
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "jupyterlab (>=4.3.5,<5.0.0)",
+    "fastcore (>=1.7.29,<2.0.0)",
+    "speedy-utils (>=0.1.20,<0.2.0)",
+    "tensorboard (>=2.19.0,<3.0.0)",
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -14,12 +20,10 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "HyperSloth"
 version = "0.1.0"
-packages = [
-    { include = "HyperSloth" }
-]
+packages = [{ include = "HyperSloth" }]
 
 [tool.poetry.scripts]
-hypersloth-train = "HyperSloth.scripts.hp_trainer:train"
+hypersloth-train = "HyperSloth.scripts.hp_trainer:main"
 hypersloth-init = "HyperSloth.scripts.get_example_config:main"
 hypersloth-prepare-unsloth-model = "HyperSloth.scripts.prepare_model:main"
 hypersloth-export = "HyperSloth.scripts.export:main"

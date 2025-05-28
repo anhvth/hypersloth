@@ -219,7 +219,7 @@ def get_trainer(
             eval_dataset=eval_dataset,
             # packing=False,
             # max_seq_length=hyper_config.fast_model_args.max_seq_length,
-            args=hf_train_args,
+            args=hf_train_args,  # type: ignore
         )
 
     # ---------------------------

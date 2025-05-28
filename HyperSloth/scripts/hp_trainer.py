@@ -4,8 +4,8 @@ import sys
 import time
 import warnings
 import importlib.util
+import argparse
 from fastcore.all import threaded
-import fire
 import tabulate
 
 from HyperSloth.hypersloth_config import HyperConfig, TrainingArgsConfig
@@ -175,9 +175,6 @@ def load_config_from_path(config_path: str):
     return config_module
 
 
-# We'll just detect if the user wants a tmux script:
-
-
 def build_tmux_script(
     session_name: str,
     script_path: str,
@@ -204,13 +201,7 @@ def build_tmux_script(
 tmux new-session -d -s {session_name} -n MAIN"""
     )
 
-    # First GPU
-    # check tmux session command, if yes, ask user enter "y" to kill the session
-    # check_if_session_exists_then_ask_to_kill = f"tmux has-session -t {session_name}
-    # && read -p 'Session exists, kill it? (y/n): ' kill_session &&
-    #  [ $kill_session == 'y' ] && tmux kill-session -t {session_name}"
-    # lines.append(check_if_session_exists_then_ask_to_kill)
-    # Remaining GPUs
+    # Create windows for all GPUs
     for local_rank, gpu_index in enumerate(gpus):
         cmd = (
             f"USE_TMUX=0 "
@@ -391,7 +382,51 @@ def initialize_training_config(config_file):
 
 def main():
     """Main entry point for the training script."""
-    fire.Fire(train)
+    parser = argparse.ArgumentParser(
+        description="HyperSloth Training Script",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    # Positional argument for config file
+    parser.add_argument(
+        "config_file", type=str, help="Path to the training configuration file"
+    )
+
+    # Optional arguments
+    parser.add_argument(
+        "--rank", type=int, default=None, help="Local rank for distributed training"
+    )
+
+    parser.add_argument(
+        "--world_size",
+        type=int,
+        default=None,
+        help="Total number of processes for distributed training",
+    )
+
+    parser.add_argument(
+        "--tmux",
+        type=str,
+        default=None,
+        help="Tmux session name for multi-GPU training",
+    )
+
+    parser.add_argument(
+        "-y",
+        action="store_true",
+        help="Auto-kill existing tmux session without confirmation",
+    )
+
+    args = parser.parse_args()
+
+    # Call the train function with parsed arguments
+    train(
+        config_file=args.config_file,
+        rank=args.rank,
+        world_size=args.world_size,
+        tmux=args.tmux,
+        y=args.y,
+    )
 
 
 if __name__ == "__main__":
