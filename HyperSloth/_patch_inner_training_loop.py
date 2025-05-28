@@ -65,9 +65,9 @@ def patch_inner_training_loop(trainer):
     _patch_log(Trainer)
 
     # Get enhanced logger for timing
-    from .logging_config import setup_enhanced_logger
+    from .logging_config import setup_hypersloth_logger
 
-    enhanced_logger = setup_enhanced_logger(gpu_id=str(HP_LOCAL_RANK))
+    enhanced_logger = setup_hypersloth_logger(gpu_id=str(HP_LOCAL_RANK))
 
     @patch
     def _inner_training_loop(

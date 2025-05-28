@@ -9,11 +9,11 @@ from .hypersloth_config import HyperConfig, TrainingArgsConfig
 from loguru import logger
 
 # Get enhanced logger for timing
-from .logging_config import setup_enhanced_logger
+from .logging_config import setup_hypersloth_logger
 
 gpu_id = os.environ.get("HYPERSLOTH_LOCAL_RANK", "0")
 log_level = os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
-enhanced_logger = setup_enhanced_logger(gpu_id=gpu_id, log_level=log_level)
+enhanced_logger = setup_hypersloth_logger(gpu_id=gpu_id, log_level=log_level)
 
 
 def init_model_and_tokenizer(hyper_config: HyperConfig):
@@ -81,9 +81,9 @@ def create_trainer(
     """Load or prepare the dataset and create the SFTTrainer."""
 
     # Get enhanced logger for timing
-    from .logging_config import setup_enhanced_logger
+    from .logging_config import setup_hypersloth_logger
 
-    enhanced_logger = setup_enhanced_logger(gpu_id=str(gpu_ith))
+    enhanced_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
 
     enhanced_logger.start_timing("dataset_identification")
     dataset_cache_path = _identify_dataset_name(tokenizer, hyper_config, hf_train_args)
@@ -145,9 +145,9 @@ def get_trainer(
     """Load or prepare the dataset and create the SFTTrainer."""
 
     # Get enhanced logger for timing
-    from .logging_config import setup_enhanced_logger
+    # from .logging_config import setup_hypersloth_logger
 
-    enhanced_logger = setup_enhanced_logger(gpu_id=str(gpu_ith))
+    # enhanced_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
 
     enhanced_logger.start_timing("dataset_loading_total")
     enhanced_logger.start_timing("dataset_identification")

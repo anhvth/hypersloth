@@ -8,21 +8,14 @@ from fastcore.all import threaded, call_parse
 import tabulate
 
 from HyperSloth.hypersloth_config import HyperConfig, TrainingArgsConfig
-from speedy_utils import setup_logger
 
 # Setup a simple global logger for script-level operations
 from HyperSloth.logging_config import (
     HyperSlothLogger,
-    setup_global_safe_logger,
+    format_config_display,
+    setup_hypersloth_logger,
 )
 from loguru import logger
-
-# Setup global logger once - this configures loguru for the entire application
-setup_global_safe_logger(
-    gpu_id="main", log_level=os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
-)
-logger = logger.bind(gpu_id="main")
-
 
 if not "HYPERSLOTH_CACHE_DIR" in os.environ:
     os.environ["HYPERSLOTH_CACHE_DIR"] = "/dev/shm/hypersloth/"
@@ -109,19 +102,6 @@ def _get_hp_grad_dir(model_name_dataset, run_id):
     return grad_dir
 
 
-def _setup_logger(gpu_id) -> HyperSlothLogger:
-    """Setup enhanced logging for HyperSloth."""
-    from HyperSloth.logging_config import setup_enhanced_logger
-
-    log_level = os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
-    enhanced_logger = setup_enhanced_logger(gpu_id=str(gpu_id), log_level=log_level)
-
-    # Store logger instance for use in training
-    os.environ[f"HYPERSLOTH_ENHANCED_LOGGER_{gpu_id}"] = "1"
-
-    return enhanced_logger
-
-
 def _train(gpu: int, hyper_config: HyperConfig, hf_train_args: TrainingArgsConfig):
     from HyperSloth.mmap_gradient_sync import MmapGradSyncCallback
     from HyperSloth.nccl_grad_sync import HyperSlothNCCLGradSyncCallback
@@ -131,7 +111,7 @@ def _train(gpu: int, hyper_config: HyperConfig, hf_train_args: TrainingArgsConfi
     os.environ["HYPERSLOTH_LOCAL_GPU_IDX"] = str(gpu)
 
     # Setup enhanced logger
-    enhanced_logger = _setup_logger(f"{gpu}")
+    enhanced_logger = setup_hypersloth_logger(gpu_id=str(gpu))
 
     hf_train_args.output_dir = os.path.join(
         hf_train_args.output_dir, *get_run_id(hyper_config, hf_train_args)
@@ -280,7 +260,8 @@ def train(
     tmux: str = None,
     y: bool = False,
 ):
-
+    if rank:
+        setup_hypersloth_logger(rank)
     config_file, hyper_config, training_config = initialize_training_config(config_file)
     # clean grad_dir
     # CASE 1: Child process => single GPU
@@ -388,14 +369,8 @@ def initialize_training_config(config_file):
     else:
         raise ValueError("No training configuration found")
 
-    # Display combined config with enhanced formatting
-    from HyperSloth.logging_config import (
-        format_config_display,
-        setup_enhanced_logger,
-    )
-
     # Setup temporary logger for config display
-    temp_logger = setup_enhanced_logger(gpu_id="0", log_level="INFO")
+    temp_logger = HyperSlothLogger()
     combined_config = format_config_display(hyper_config, training_config)
     temp_logger.log_config_table(
         combined_config, "🔧 HyperSloth Training Configuration"

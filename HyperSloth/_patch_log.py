@@ -4,7 +4,7 @@ from typing import Dict, Optional
 import numpy as np
 from filelock import FileLock, BaseFileLock  # Import FileLock
 from fastcore.all import patch
-from .logging_config import get_safe_logger
+from loguru import logger
 
 from transformers.trainer import Trainer
 from transformers.trainer_utils import speed_metrics
@@ -22,8 +22,6 @@ from transformers.trainer_callback import TrainerCallback, TrainerControl, Train
 TIME_OUT = 300
 SLEEP_TIME = 0.01  # Use a small sleep time for waiting loops
 WAIT_WARNING_THRESHOLD = 2  # Log a warning if waiting longer than this
-
-logger = get_safe_logger()
 
 
 class Flag:
