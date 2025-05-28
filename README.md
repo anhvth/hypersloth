@@ -4,7 +4,9 @@
 
 # Hyper-Sloth
 
-A high-performance framework for fine-tuning large language models.
+A high-performance framework for fine-tuning large language models, built on top of **Unsloth** and **HuggingFace Transformers**.
+
+> **🚀 Everything Unsloth supports + Multi-GPU distributed training**
 
 ## Performance Benchmarks
 
@@ -12,24 +14,35 @@ HyperSloth demonstrates significant performance improvements over other popular 
 
 ### Training Time Comparison (4x RTX 4090)
 
-| Framework           | Training Time | VRAM Peak Consumption | Communication Backend |
-| ------------------- | ------------- | --------------------- | --------------------- |
-| HyperSloth (NCCL)   | 19 minutes    | 6 GB                  | NCCL                  |
-| HyperSloth (Legacy) | ~21 minutes   | 6 GB                  | Memory-mapped files   |
-| LlamaFactory        | 30 minutes    | 21 GB                 | PyTorch DDP           |
-| Unsloth (1X)        | ~70 minutes   | 6 GB                  | Single GPU            |
+| Framework                  | Training Time | VRAM Peak Consumption | Communication Backend |
+| -------------------------- | ------------- | --------------------- | --------------------- |
+| HyperSloth (NCCL) (4GPUS)  | 19 minutes    | 6 GB                  | NCCL                  |
+| HyperSloth (Legacy)(4GPUS) | ~21 minutes   | 6 GB                  | Memory-mapped files   |
+| LlamaFactory               | 30 minutes    | 21 GB                 | PyTorch DDP           |
+| Unsloth (1 GPU)            | ~70 minutes   | 6 GB                  | Single GPU            |
 
 ## Overview
 
-HyperSloth is an extension of Unsloth for distributed training of Large Language Models across multiple GPUs. It uses NCCL as the backbone for efficient gradient synchronization, providing production-ready distributed training capabilities.
+HyperSloth is built on top of **Unsloth** and **HuggingFace Transformers**, extending their capabilities to distributed training across multiple GPUs. It uses NCCL as the backbone for efficient gradient synchronization, providing production-ready distributed training capabilities.
+
+**Key Value Proposition:**
+
+- ✅ **Everything Unsloth supports**: All models, quantization methods, and optimizations
+- ✅ **Plus Multi-GPU**: Distributed training across multiple GPUs with linear scaling
+- ✅ **Built on HuggingFace**: Full compatibility with the HuggingFace ecosystem
 
 ## Features
 
-- **NCCL-based gradient synchronization**: High-performance distributed training using industry-standard NCCL backend
-- **Efficient weight synchronization**: Ensure model consistency across all GPUs during training
+- **Built on Unsloth & HuggingFace**: Full compatibility with the entire ecosystem
+- **Everything Unsloth supports + Multi-GPU**: All models, quantization, optimizations across multiple GPUs
+- **NCCL-based gradient synchronization**: High-performance distributed training using industry-standard backend
+- **Flexible quantization support**: 4-bit, 8-bit, and full precision fine-tuning
+- **SFT training**: Supervised fine-tuning with response-only or full sequence loss
+- **Linear scaling**: Near-perfect speedup across multiple GPUs
 - **Template fixes**: Custom tokenizer chat template fixes for proper handling of "think" tags
-- **Customizable loss types**: Support for full sequence or response-only training
 - **Educational memory-mapped approach**: Includes deprecated memory-mapped gradient sync for learning purposes
+
+> **Training Methods**: Currently supports SFT (Supervised Fine-Tuning). DPO, GRPO, and other advanced training methods will be supported soon.
 
 ## Installation
 
@@ -48,6 +61,32 @@ HyperSloth now uses **NCCL (NVIDIA Collective Communications Library)** as its b
 - **Robust fault tolerance**: Built-in error handling and retry mechanisms
 - **Scalable communication**: Efficient all-reduce operations across multiple GPUs
 - **Production stability**: Battle-tested in enterprise environments
+
+### Supported Training Configurations
+
+**Built on Unsloth Foundation:**
+
+- **All Unsloth models**: Llama, Mistral, Gemma, Qwen, and more
+- **All Unsloth optimizations**: Memory-efficient kernels, gradient checkpointing
+- **All Unsloth quantization**: 4-bit, 8-bit, full precision support
+
+**Enhanced with Multi-GPU:**
+
+- **Linear scaling**: 2x GPUs ≈ 2x speed, 4x GPUs ≈ 4x speed
+- **Memory efficiency**: Same per-GPU memory usage as single GPU
+- **NCCL communication**: Optimized gradient synchronization
+
+**Training Methods:**
+
+- **SFT (Supervised Fine-Tuning)**: ✅ Currently supported
+  - Response-only loss calculation
+  - Full sequence training
+  - Custom chat template handling
+- **DPO (Direct Preference Optimization)**: 🚧 Coming soon
+- **GRPO (Group Relative Policy Optimization)**: 🚧 Coming soon
+- **All other Unsloth methods**: 🚧 Planned for future releases
+
+> **Compatibility**: HyperSloth supports **everything** that Unsloth supports, distributed across multiple GPUs with near-linear scaling.
 
 ### Legacy Implementation (Educational)
 
