@@ -12,10 +12,8 @@ from HyperSloth._utils import (
 )
 
 from .hypersloth_config import HyperConfig, TrainingArgsConfig
-from .logging_config import get_safe_logger
-
-# Use safe logger that handles gpu_id properly
-logger = get_safe_logger()
+from .logging_config import HyperSlothLogger
+from loguru import logger
 
 
 def _change_compiler_location():

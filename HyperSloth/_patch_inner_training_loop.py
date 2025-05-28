@@ -389,10 +389,7 @@ def patch_inner_training_loop(trainer):
                 total_updates -= 1
 
             clock = Clock()
-            from ._patch_sampler import print_sequence_lengths
-
-            print_sequence_lengths(self.train_dataset)
-            for _ in range(total_updates):
+            for inner_step in range(total_updates):
                 update_step += 1
                 num_batches = (
                     args.gradient_accumulation_steps
@@ -415,15 +412,15 @@ def patch_inner_training_loop(trainer):
                         local_rank = HP_LOCAL_RANK % max_gpu_need
 
                     # get the list of attention percentage per row
-                    attention_rows = [
-                        inputs["attention_mask"][i].sum().item()
-                        / inputs["attention_mask"][i].numel()
-                        for i in range(len(inputs["attention_mask"]))
-                    ]
-                    attention_rows_formated = ", ".join(
-                        f"{attention_row:.2f}" for attention_row in attention_rows
-                    )
-                    print(f"[{local_rank}] Attention rows: {attention_rows_formated}")
+                    # attention_rows = [
+                    #     inputs["attention_mask"][i].sum().item()
+                    #     / inputs["attention_mask"][i].numel()
+                    #     for i in range(len(inputs["attention_mask"]))
+                    # ]
+                    # attention_rows_formated = ", ".join(
+                    #     f"{attention_row:.2f}" for attention_row in attention_rows
+                    # )
+                    # print(f"[{local_rank}] Attention rows: {attention_rows_formated}")
                     return {
                         "input_ids": inputs["input_ids"][local_rank::max_gpu_need],
                         "attention_mask": inputs["attention_mask"][
@@ -433,6 +430,9 @@ def patch_inner_training_loop(trainer):
                     }
 
                 for i, inputs in enumerate(batch_samples):
+                    if i == 0:  # Start timing on first batch of accumulation
+                        enhanced_logger.start_timing("forward_pass")
+
                     inputs = select(inputs)
                     step += 1
 
@@ -611,8 +611,11 @@ def patch_inner_training_loop(trainer):
                             "optimizer_step", log_result=False
                         )
 
-                        # Log step timing progress every 10 steps
-                        if self.state.global_step % 10 == 0:
+                        # Log step timing progress every 10 steps (only on master GPU)
+                        if (
+                            self.state.global_step % 10 == 0
+                            and os.getenv("HYPERSLOTH_LOCAL_RANK", "0") == "0"
+                        ):
                             enhanced_logger.log_step_timing_progress(
                                 "forward_pass",
                                 self.state.global_step,

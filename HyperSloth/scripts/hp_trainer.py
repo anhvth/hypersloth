@@ -14,11 +14,14 @@ from speedy_utils import setup_logger
 from HyperSloth.logging_config import (
     HyperSlothLogger,
     setup_global_safe_logger,
-    get_safe_logger,
 )
+from loguru import logger
 
-setup_global_safe_logger(gpu_id="main", log_level="INFO")
-logger = get_safe_logger(gpu_id="main")
+# Setup global logger once - this configures loguru for the entire application
+setup_global_safe_logger(
+    gpu_id="main", log_level=os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
+)
+logger = logger.bind(gpu_id="main")
 
 
 if not "HYPERSLOTH_CACHE_DIR" in os.environ:
@@ -386,7 +389,10 @@ def initialize_training_config(config_file):
         raise ValueError("No training configuration found")
 
     # Display combined config with enhanced formatting
-    from HyperSloth.logging_config import format_config_display, setup_enhanced_logger
+    from HyperSloth.logging_config import (
+        format_config_display,
+        setup_enhanced_logger,
+    )
 
     # Setup temporary logger for config display
     temp_logger = setup_enhanced_logger(gpu_id="0", log_level="INFO")
@@ -401,5 +407,8 @@ def initialize_training_config(config_file):
         training_config.per_device_train_batch_size
         * training_config.gradient_accumulation_steps
         * len(hyper_config.training.gpus)
+    )
+    os.environ["HYPERSLOTH_GPU_FORWARD_BATCH_SIZE"] = str(
+        training_config.per_device_train_batch_size * len(hyper_config.training.gpus)
     )
     return config_file, hyper_config, training_config

@@ -7,9 +7,9 @@ import sys
 from typing import Optional, Dict, Any
 from loguru import logger
 
-from HyperSloth.logging_config.logging_display import DisplayMixin
-from HyperSloth.logging_config.logging_formatter import LogFormatter
-from HyperSloth.logging_config.logging_timer import TimingMixin
+from .logging_timer import TimingMixin
+from .logging_formatter import LogFormatter
+from .logging_display import DisplayMixin
 
 
 class HyperSlothLogger(TimingMixin, DisplayMixin):
@@ -66,11 +66,11 @@ class HyperSlothLogger(TimingMixin, DisplayMixin):
 
     def _add_file_handlers(self, base_logger, log_format: str) -> None:
         """Add file handlers for logging."""
-        log_dir = "log"
+        log_dir = ".log"
         os.makedirs(log_dir, exist_ok=True)
 
         # Individual GPU log
-        log_file = f"{log_dir}/{self.gpu_id}.txt"
+        log_file = f"{log_dir}/gpu_{self.gpu_id}.log"
         if os.path.exists(log_file):
             os.remove(log_file)
 
@@ -78,13 +78,15 @@ class HyperSlothLogger(TimingMixin, DisplayMixin):
             log_file,
             format=log_format,
             level="DEBUG",
+            rotation="10 MB",
+            retention="1 week",
             enqueue=True,
             filter=lambda record: record["extra"].get("gpu_id") == self.gpu_id,
         )
 
         # Master log for GPU 0
         if self.gpu_id == "0":
-            master_log = f"{log_dir}/master.txt"
+            master_log = f"{log_dir}/master.log"
             if os.path.exists(master_log):
                 os.remove(master_log)
 
@@ -92,6 +94,8 @@ class HyperSlothLogger(TimingMixin, DisplayMixin):
                 master_log,
                 format=log_format,
                 level="INFO",
+                rotation="50 MB",
+                retention="1 week",
                 enqueue=True,
                 filter=lambda record: record["extra"].get("gpu_id") is not None,
             )

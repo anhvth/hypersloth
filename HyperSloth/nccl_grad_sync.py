@@ -2,10 +2,7 @@ import torch
 import torch.distributed as dist
 from transformers.trainer_callback import TrainerCallback, TrainerControl, TrainerState
 from typing import List, Optional
-from .logging_config import get_safe_logger
-
-# Use safe logger that handles gpu_id properly
-logger = get_safe_logger()
+from loguru import logger
 
 
 class NCCLGradSyncCallback(TrainerCallback):
@@ -113,6 +110,7 @@ def setup_nccl_for_hypersloth(gpu: int, gpus: list) -> None:
     """Setup NCCL environment variables for HyperSloth integration."""
     import os
     import time
+    from tabulate import tabulate
     import torch.distributed as dist
 
     # Map HyperSloth parameters to NCCL environment variables
@@ -126,13 +124,20 @@ def setup_nccl_for_hypersloth(gpu: int, gpus: list) -> None:
     os.environ["MASTER_PORT"] = "29500"  # Default port
 
     # Log all set environment variables
-    logger.info(
-        f'[GPU={gpu}] NCCL env: RANK={os.environ["RANK"]}, WORLD_SIZE={os.environ["WORLD_SIZE"]}, MASTER_ADDR={os.environ["MASTER_ADDR"]}, MASTER_PORT={os.environ["MASTER_PORT"]}'
-    )
+    # Create table for environment variables
+    env_vars = [
+        ["RANK", os.environ["RANK"]],
+        ["WORLD_SIZE", os.environ["WORLD_SIZE"]],
+        ["MASTER_ADDR", os.environ["MASTER_ADDR"]],
+        ["MASTER_PORT", os.environ["MASTER_PORT"]],
+    ]
+
+    env_table = tabulate(env_vars, headers=["Variable", "Value"], tablefmt="grid")
+
+    logger.info(f"[GPU={gpu}] NCCL environment variables:\n{env_table}")
 
     # Set the current CUDA device to the specific GPU
-
-    logger.info(f"[GPU={gpu}] Setting current CUDA device to:0")
+    logger.debug(f"[GPU={gpu}] Setting current CUDA device to:0")
     torch.cuda.set_device(0)
 
     # Retry logic for NCCL initialization
@@ -148,18 +153,18 @@ def setup_nccl_for_hypersloth(gpu: int, gpus: list) -> None:
 
             logger.info(
                 f"[GPU={gpu}] NCCL setup complete: "
-                f"rank={rank}, world_size={world_size}, attempt={attempt + 1}"
+                f"rank={rank}, world_size={world_size}"
             )
             return
 
         except Exception as e:
-            logger.warning(
+            logger.debug(
                 f"[GPU={gpu}] NCCL init attempt {attempt + 1}/{max_retries} "
                 f"failed: {e}"
             )
 
             if attempt < max_retries - 1:
-                logger.info(f"[GPU={gpu}] Retrying NCCL init in {retry_delay}s...")
+                logger.debug(f"[GPU={gpu}] Retrying NCCL init in {retry_delay}s...")
                 time.sleep(retry_delay)
 
                 # Clean up any partial initialization

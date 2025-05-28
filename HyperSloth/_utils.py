@@ -6,15 +6,14 @@ Handles weight synchronization, model setup, and distributed training coordinati
 import os
 
 from .hypersloth_config import HyperConfig, TrainingArgsConfig
-from .logging_config import get_safe_logger
+from loguru import logger
 
 # Get enhanced logger for timing
 from .logging_config import setup_enhanced_logger
 
-
 gpu_id = os.environ.get("HYPERSLOTH_LOCAL_RANK", "0")
-enhanced_logger = setup_enhanced_logger(gpu_id=gpu_id)
-from loguru import logger
+log_level = os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
+enhanced_logger = setup_enhanced_logger(gpu_id=gpu_id, log_level=log_level)
 
 
 def init_model_and_tokenizer(hyper_config: HyperConfig):
@@ -220,6 +219,7 @@ def get_trainer(
     from datasets import load_from_disk
     from trl import SFTTrainer
 
+    enhanced_logger.start_timing("dataset_loading_total")
     LOCAL_RANK = int(os.environ["HYPERSLOTH_LOCAL_RANK"])
     lock = dataset_cache_path + ".lock"
 

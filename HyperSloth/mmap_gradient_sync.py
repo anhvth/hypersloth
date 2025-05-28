@@ -11,10 +11,7 @@ import numpy as np
 import torch
 from filelock import FileLock
 from transformers.trainer_callback import TrainerCallback, TrainerControl, TrainerState
-from .logging_config import get_safe_logger
-
-# Use safe logger that handles gpu_id properly
-logger = get_safe_logger()
+from loguru import logger
 
 TIME_OUT = 1800
 SLEEP_TIME = 0.01
@@ -64,11 +61,15 @@ class Flag:
 
             elapsed = time.time() - t0
             if elapsed > WAIT_WARNING_THRESHOLD and not has_logged:
-                logger.warning(f"[Flag={self.file_path}] waiting {elapsed:.1f}s at step={step}, flags={flags_copy.tolist()}")
+                logger.warning(
+                    f"[Flag={self.file_path}] waiting {elapsed:.1f}s at step={step}, flags={flags_copy.tolist()}"
+                )
                 has_logged = True
 
             if elapsed > timeout:
-                raise RuntimeError(f"[Flag={self.file_path}] Timeout after {elapsed:.1f}s waiting at step={step}, flags={flags_copy.tolist()}")
+                raise RuntimeError(
+                    f"[Flag={self.file_path}] Timeout after {elapsed:.1f}s waiting at step={step}, flags={flags_copy.tolist()}"
+                )
 
             time.sleep(SLEEP_TIME)
 
@@ -83,12 +84,18 @@ class Flag:
 
 
 class MmapGradientSync:
-    def __init__(self, model: torch.nn.Module, gpu: int, gpus: list, grad_dir: str = "/dev/shm/hypersloth/"):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        gpu: int,
+        gpus: list,
+        grad_dir: str = "/dev/shm/hypersloth/",
+    ):
         self.gpu = gpu
         self.gpus = gpus
         self.local_rank = gpus.index(gpu)
         self.num_gpus = len(gpus)
-        self.is_main = (self.local_rank == 0)
+        self.is_main = self.local_rank == 0
 
         os.makedirs(".cache", exist_ok=True)
         log_file = f".cache/gpu_{self.local_rank}.log"
@@ -97,8 +104,15 @@ class MmapGradientSync:
         self.logger = logger.bind()
         # remove existing handlers
         # self.logger.remove()
-        self.logger.add(log_file, format="{time} {level} {message}", level="DEBUG", enqueue=True)
-        self.logger.add(main_log_file, format="{time} {level} {message}", level="DEBUG", enqueue=True)
+        self.logger.add(
+            log_file, format="{time} {level} {message}", level="DEBUG", enqueue=True
+        )
+        self.logger.add(
+            main_log_file,
+            format="{time} {level} {message}",
+            level="DEBUG",
+            enqueue=True,
+        )
 
         os.makedirs(grad_dir, exist_ok=True)
 
@@ -111,7 +125,14 @@ class MmapGradientSync:
             if param.requires_grad:
                 numel = param.numel()
                 shape = param.shape
-                self.param_info.append({"name": name, "offset": total_grad_size, "numel": numel, "shape": shape})
+                self.param_info.append(
+                    {
+                        "name": name,
+                        "offset": total_grad_size,
+                        "numel": numel,
+                        "shape": shape,
+                    }
+                )
                 total_grad_size += numel * self.num_gpus
 
         if self.is_main:
@@ -121,16 +142,34 @@ class MmapGradientSync:
             while not os.path.exists(self.grad_path):
                 time.sleep(SLEEP_TIME)
 
-        self.grad_mem = np.memmap(self.grad_path, dtype="float32", mode="r+", shape=(total_grad_size,))
+        self.grad_mem = np.memmap(
+            self.grad_path, dtype="float32", mode="r+", shape=(total_grad_size,)
+        )
 
         self.flag_dir = os.path.join(grad_dir, "flags")
         os.makedirs(self.flag_dir, exist_ok=True)
 
         self.flags = {
-            "ready_to_start": Flag(self.num_gpus, os.path.join(self.flag_dir, "ready_to_start.dat"), is_master=self.is_main),
-            "write": Flag(self.num_gpus, os.path.join(self.flag_dir, "write.dat"), is_master=self.is_main),
-            "read": Flag(self.num_gpus, os.path.join(self.flag_dir, "read.dat"), is_master=self.is_main),
-            "iteration_done": Flag(self.num_gpus, os.path.join(self.flag_dir, "iteration_done.dat"), is_master=self.is_main),
+            "ready_to_start": Flag(
+                self.num_gpus,
+                os.path.join(self.flag_dir, "ready_to_start.dat"),
+                is_master=self.is_main,
+            ),
+            "write": Flag(
+                self.num_gpus,
+                os.path.join(self.flag_dir, "write.dat"),
+                is_master=self.is_main,
+            ),
+            "read": Flag(
+                self.num_gpus,
+                os.path.join(self.flag_dir, "read.dat"),
+                is_master=self.is_main,
+            ),
+            "iteration_done": Flag(
+                self.num_gpus,
+                os.path.join(self.flag_dir, "iteration_done.dat"),
+                is_master=self.is_main,
+            ),
         }
 
         self.step_file = os.path.join(self.flag_dir, "step.dat")
@@ -142,7 +181,9 @@ class MmapGradientSync:
             while not os.path.exists(self.step_file):
                 time.sleep(SLEEP_TIME)
 
-        self.step_mem = np.memmap(self.step_file, dtype="float32", mode="r+", shape=(1,))
+        self.step_mem = np.memmap(
+            self.step_file, dtype="float32", mode="r+", shape=(1,)
+        )
         if self.is_main:
             self.step_mem[0] = 0.0
             self.step_mem.flush()
@@ -163,7 +204,7 @@ class MmapGradientSync:
         self.logger.info(f"[GPU={self.gpu}] Master incremented step to {new}")
 
     def _check_step_matches_local(self, local_step: int):
-        return (self._get_current_step() == local_step)
+        return self._get_current_step() == local_step
 
     def accumulate_local_grad(self, model: torch.nn.Module, local_step: int):
         self.flags["ready_to_start"].update(self.local_rank)
@@ -171,10 +212,10 @@ class MmapGradientSync:
             self.flags["ready_to_start"].wait_for_all(local_step)
             self.flags["ready_to_start"].reset()
 
-
-
         if not self._check_step_matches_local(local_step):
-            raise RuntimeError(f"[GPU={self.gpu}] Step mismatch: local={local_step}, global={self._get_current_step()}")
+            raise RuntimeError(
+                f"[GPU={self.gpu}] Step mismatch: local={local_step}, global={self._get_current_step()}"
+            )
 
         named_params = dict(model.named_parameters())
         written = 0
@@ -191,10 +232,14 @@ class MmapGradientSync:
                     written += numel
             self.grad_mem.flush()
 
-        self.logger.debug(f"[GPU={self.gpu}] Wrote {written} grad floats at step={local_step}")
+        self.logger.debug(
+            f"[GPU={self.gpu}] Wrote {written} grad floats at step={local_step}"
+        )
         self.flags["write"].update(self.local_rank)
 
-    def read_final_grad_into_model(self, model: torch.nn.Module, local_step: int, average=True):
+    def read_final_grad_into_model(
+        self, model: torch.nn.Module, local_step: int, average=True
+    ):
         self.flags["write"].wait_for_all(local_step)
 
         named_params = dict(model.named_parameters())
@@ -242,12 +287,16 @@ class MmapGradSyncCallback(TrainerCallback):
         self.gpus = gpus
         self.grad_sync = MmapGradientSync(model, gpu, gpus, grad_dir)
 
-    def on_pre_optimizer_step(self, args, state: TrainerState, control: TrainerControl, **kwargs):
+    def on_pre_optimizer_step(
+        self, args, state: TrainerState, control: TrainerControl, **kwargs
+    ):
         step = state.global_step
         self.grad_sync.accumulate_local_grad(self.model, step)
         self.grad_sync.read_final_grad_into_model(self.model, step, average=True)
 
-    def on_optimizer_step(self, args, state: TrainerState, control: TrainerControl, **kwargs):
+    def on_optimizer_step(
+        self, args, state: TrainerState, control: TrainerControl, **kwargs
+    ):
         step = state.global_step
         self.grad_sync.zero_mmaps(step)
         self.grad_sync.iteration_done(step)

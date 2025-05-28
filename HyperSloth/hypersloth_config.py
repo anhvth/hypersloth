@@ -48,13 +48,13 @@ class FastModelArgs(BaseModel):
     """Configuration for Unsloth's FastModel initialization."""
 
     model_name: str = "unsloth/gemma-3-4b-it"
-    max_seq_length: int = None
+    max_seq_length: Optional[int] = None
     load_in_4bit: bool = True
     load_in_8bit: bool = False
     full_finetuning: bool = False
 
     class Config:
-        """Pydantic configuration for DataConfig."""
+        """Pydantic configuration for FastModelArgs."""
 
         extra = "allow"
 
@@ -73,7 +73,7 @@ class LoraArgs(BaseModel):
     random_state: int = 3407
 
     class Config:
-        """Pydantic configuration for DataConfig."""
+        """Pydantic configuration for LoraArgs."""
 
         extra = "allow"
 
