@@ -49,11 +49,17 @@ class HyperSlothLogger(TimingMixin, DisplayMixin):
                 level=self.log_level,
                 colorize=True,
                 enqueue=True,
-                filter=lambda record: record["extra"].get("gpu_id") is not None,
+                filter=lambda record: record["extra"].get("gpu_id") is not None or self._bind_gpu_id(record),
             )
 
         # Individual GPU log files
         self._add_file_handlers(base_logger, log_format)
+
+    def _bind_gpu_id(self, record) -> bool:
+        """Bind gpu_id to records that don't have it."""
+        if "gpu_id" not in record["extra"]:
+            record["extra"]["gpu_id"] = self.gpu_id
+        return True
 
     def _should_add_console_handler(self) -> bool:
         """Check if console handler should be added."""
@@ -79,7 +85,7 @@ class HyperSlothLogger(TimingMixin, DisplayMixin):
             rotation="10 MB",
             retention="1 week",
             enqueue=True,
-            filter=lambda record: record["extra"].get("gpu_id") == self.gpu_id,
+            filter=lambda record: record["extra"].get("gpu_id", self.gpu_id) == self.gpu_id or self._bind_gpu_id(record),
         )
 
         # Master log for GPU 0
@@ -95,7 +101,7 @@ class HyperSlothLogger(TimingMixin, DisplayMixin):
                 rotation="50 MB",
                 retention="1 week",
                 enqueue=True,
-                filter=lambda record: record["extra"].get("gpu_id") is not None,
+                filter=lambda record: self._bind_gpu_id(record),
             )
 
     def log_error(self, error_msg: str, exc_info: bool = False) -> None:
@@ -112,38 +118,25 @@ class HyperSlothLogger(TimingMixin, DisplayMixin):
 
 
 def setup_hypersloth_logger(
-    gpu_id: Optional[str] = None, log_level: str = None
+    gpu_id: Optional[str] = None, log_level: Optional[str] = None
 ) -> HyperSlothLogger:
     """Setup and return enhanced logger instance."""
     if log_level is None:
         log_level = os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
+    
+    # Ensure gpu_id is set
+    if gpu_id is None:
+        gpu_id = os.environ.get("HYPERSLOTH_LOCAL_RANK", "0")
+    
     return HyperSlothLogger(gpu_id=gpu_id, log_level=log_level)
 
 
-# def setup_global_safe_logger(gpu_id) -> Any:
-#     """Get a logger instance that's safe to use with proper gpu_id binding."""
-
-#     def _setup_global_safe_logger(gpu_id, log_level: str = None) -> None:
-#         """Setup a global logger that's safe to use everywhere."""
-#         if log_level is None:
-#             log_level = os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
-#         # remove
-#         logger.remove()
-#         formatter = LogFormatter(gpu_id)
-#         simple_format = formatter.get_simple_format()
-
-#         logger.add(
-#             sys.stderr,
-#             format=simple_format,
-#             level=log_level.upper(),
-#             colorize=True,
-#             enqueue=True,
-#         )
-
-#     if gpu_id is None:
-#         gpu_id = os.environ.get("HYPERSLOTH_LOCAL_RANK", "main")
-
-#     return logger.bind(gpu_id=gpu_id)
+def get_safe_logger(gpu_id: Optional[str] = None):
+    """Get a logger instance that's safe to use with proper gpu_id binding."""
+    if gpu_id is None:
+        gpu_id = os.environ.get("HYPERSLOTH_LOCAL_RANK", "0")
+    
+    return logger.bind(gpu_id=gpu_id)
 
 
 def format_config_display(hyper_config: Any, training_config: Any) -> Dict[str, Any]:

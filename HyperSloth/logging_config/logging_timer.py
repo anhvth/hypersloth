@@ -3,7 +3,7 @@ Timing functionality for HyperSloth logging.
 """
 
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from rich.table import Table
 from rich.console import Console
 
@@ -37,6 +37,9 @@ class TimingMixin:
         self.step_durations: Dict[str, list] = {}
         self.total_training_start: Optional[float] = None
         self.console = Console()
+        # These attributes are expected to be provided by the inheriting class
+        self.logger: Any
+        self.gpu_id: Optional[str] = None
 
     def start_timing(self, step_name: str) -> None:
         """Start timing a major step."""

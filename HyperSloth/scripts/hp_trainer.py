@@ -4,7 +4,8 @@ import sys
 import time
 import warnings
 import importlib.util
-from fastcore.all import threaded, call_parse
+from fastcore.all import threaded
+import fire
 import tabulate
 
 from HyperSloth.hypersloth_config import HyperConfig, TrainingArgsConfig
@@ -252,7 +253,6 @@ tmux new-session -d -s {session_name} -n MAIN"""
     logger.info(f"Script started with session name {session_name}")
 
 
-@call_parse
 def train(
     config_file: str,
     rank: int = None,
@@ -387,3 +387,12 @@ def initialize_training_config(config_file):
         training_config.per_device_train_batch_size * len(hyper_config.training.gpus)
     )
     return config_file, hyper_config, training_config
+
+
+def main():
+    """Main entry point for the training script."""
+    fire.Fire(train)
+
+
+if __name__ == "__main__":
+    main()

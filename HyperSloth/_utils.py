@@ -16,6 +16,22 @@ log_level = os.environ.get("HYPERSLOTH_LOG_LEVEL", "INFO")
 hp_logger = setup_hypersloth_logger(gpu_id=gpu_id, log_level=log_level)
 
 
+def _identify_dataset_name(tokenizer, hyper_config, hf_traiØn_args):
+    from speedy_utils import identify
+
+    tokenizer_name = identify(str(tokenizer))
+    # hash the dataset name and max_seq_length to create a unique cache name
+    dataset_name = identify(
+        [
+            hyper_config.data.model_dump(),
+            hyper_config.fast_model_args.max_seq_length,
+        ]
+    )
+    dataset_cache_name = "dataset_" + tokenizer_name + "_" + dataset_name
+    dataset_cache_path = os.path.join(".cache/", dataset_cache_name)
+    return dataset_cache_path
+
+
 def init_model_and_tokenizer(hyper_config: HyperConfig):
     """Initialize and optionally set up LoRA for the model."""
     from unsloth import FastModel
@@ -116,85 +132,53 @@ def create_trainer(
     return trainer
 
 
-def _identify_dataset_name(tokenizer, hyper_config, hf_train_args):
-    from speedy_utils import identify
+# def get_trainer(
+#     tokenizer,
+#     hyper_config: HyperConfig,
+#     hf_train_args: TrainingArgsConfig,
+#     gpu_ith,
+#     model,
+#     dataset_cache_path,
+#     dataset_cache_exists,
+#     counter=0,
+# ):
+#     """Load or prepare the dataset and create the SFTTrainer."""
 
-    tokenizer_name = identify(str(tokenizer))
-    # hash the dataset name and max_seq_length to create a unique cache name
-    dataset_name = identify(
-        [
-            hyper_config.data.model_dump(),
-            hyper_config.fast_model_args.max_seq_length,
-        ]
-    )
-    dataset_cache_name = "dataset_" + tokenizer_name + "_" + dataset_name
-    dataset_cache_path = os.path.join(".cache/", dataset_cache_name)
-    return dataset_cache_path
+#     # Get enhanced logger for timing
+#     # from .logging_config import setup_hypersloth_logger
 
+#     # hp_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
 
-def get_trainer(
-    tokenizer,
-    hyper_config: HyperConfig,
-    hf_train_args: TrainingArgsConfig,
-    gpu_ith,
-    model,
-    dataset_cache_path,
-    dataset_cache_exists,
-    counter=0,
-):
-    """Load or prepare the dataset and create the SFTTrainer."""
+#     hp_logger.start_timing("dataset_loading_total")
+#     hp_logger.start_timing("dataset_identification")
+#     dataset_cache_path = _identify_dataset_name(tokenizer, hyper_config, hf_train_args)
+#     hp_logger.finish_timing("dataset_identification")
 
-    # Get enhanced logger for timing
-    # from .logging_config import setup_hypersloth_logger
+#     dataset_cache_exists = os.path.exists(dataset_cache_path)
 
-    # hp_logger = setup_hypersloth_logger(gpu_id=str(gpu_ith))
+#     # CASE 1: Dataset cache already exists, just load it
+#     hp_logger.start_timing("trainer_setup")
+#     trainer = get_trainer(
+#         tokenizer,
+#         hyper_config,
+#         hf_train_args,
+#         gpu_ith,
+#         model,
+#         dataset_cache_path,
+#         dataset_cache_exists,
+#     )
+#     hp_logger.finish_timing("trainer_setup")
 
-    hp_logger.start_timing("dataset_loading_total")
-    hp_logger.start_timing("dataset_identification")
-    dataset_cache_path = _identify_dataset_name(tokenizer, hyper_config, hf_train_args)
-    hp_logger.finish_timing("dataset_identification")
+#     from HyperSloth._patch_inner_training_loop import patch_inner_training_loop
+#     from HyperSloth._patch_sampler import patch_sampler
 
-    dataset_cache_exists = os.path.exists(dataset_cache_path)
+#     if hyper_config.use_mmap_grad_sync:
+#         hp_logger.start_timing("training_loop_patch")
+#         patch_inner_training_loop(trainer)
+#         hp_logger.finish_timing("training_loop_patch")
 
-    # CASE 1: Dataset cache already exists, just load it
-    hp_logger.start_timing("trainer_setup")
-    trainer = get_trainer(
-        tokenizer,
-        hyper_config,
-        hf_train_args,
-        gpu_ith,
-        model,
-        dataset_cache_path,
-        dataset_cache_exists,
-    )
-    hp_logger.finish_timing("trainer_setup")
-
-    from HyperSloth._patch_inner_training_loop import patch_inner_training_loop
-    from HyperSloth._patch_sampler import patch_sampler
-
-    if hyper_config.use_mmap_grad_sync:
-        hp_logger.start_timing("training_loop_patch")
-        patch_inner_training_loop(trainer)
-        hp_logger.finish_timing("training_loop_patch")
-
-    patch_sampler(trainer)
-    return trainer
-
-
-def _identify_dataset_name(tokenizer, hyper_config, hf_train_args):
-    from speedy_utils import identify
-
-    tokenizer_name = identify(str(tokenizer))
-    # hash the dataset name and max_seq_length to create a unique cache name
-    dataset_name = identify(
-        [
-            hyper_config.data.model_dump(),
-            hyper_config.fast_model_args.max_seq_length,
-        ]
-    )
-    dataset_cache_name = "dataset_" + tokenizer_name + "_" + dataset_name
-    dataset_cache_path = os.path.join(".cache/", dataset_cache_name)
-    return dataset_cache_path
+#     patch_sampler(trainer)
+#     return trainer
 
 
 def get_trainer(
@@ -225,20 +209,16 @@ def get_trainer(
 
     def _create_trainer(train_dataset, eval_dataset=None, skip_prepare=True):
         """Helper to build an SFTTrainer from given train/eval datasets."""
-        # We use a dataset_kwargs override so that, once the dataset is prepared,
-        # it won't attempt the same "prepare" logic again.
-        hf_train_args.dataset_kwargs = {"skip_prepare_dataset": skip_prepare}
         if LOCAL_RANK != 0 or eval_dataset is None:
             hf_train_args.eval_strategy = "no"
-        hf_train_args.dataset_batch_size = hf_train_args.per_device_train_batch_size
+
         return SFTTrainer(
             model=model,
-            tokenizer=tokenizer,
+            # tokenizer=tokenizer,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            dataset_text_field="text",
-            max_seq_length=hyper_config.fast_model_args.max_seq_length,
-            dataset_num_proc=hyper_config.data.dataset_num_proc,
+            # packing=False,
+            # max_seq_length=hyper_config.fast_model_args.max_seq_length,
             args=hf_train_args,
         )
 

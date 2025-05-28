@@ -25,15 +25,12 @@ class DisplayMixin:
     ) -> None:
         """Log configuration in organized tables."""
         sections = self._get_config_sections()
+        self.console.print(f"\n[bold blue]{title}[/bold blue]")
 
-        gpu_id = getattr(self, "gpu_id", None)
-        if gpu_id == "0":
-            self.console.print(f"\n[bold blue]{title}[/bold blue]")
+        for section_name, keys in sections.items():
+            self._display_config_section(section_name, keys, config_dict, sections)
 
-            for section_name, keys in sections.items():
-                self._display_config_section(section_name, keys, config_dict, sections)
-
-            self.console.print()
+        self.console.print()
 
     def _get_config_sections(self) -> Dict[str, list]:
         """Get configuration sections for organized display."""
