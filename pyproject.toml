@@ -52,13 +52,14 @@ opensloth-export = "opensloth.scripts.export:main"
 opensloth-build-dataset = "opensloth.scripts.build_dataset:main"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.poetry]
-name = "opensloth"
-version = "0.1.5"
-packages = [{ include = "opensloth", from = "src" }]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-[tool.poetry.scripts]
-opensloth-train = "opensloth.scripts.opensloth_sft_trainer"
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.uv.sources]
+speedy-utils = { workspace = true }
